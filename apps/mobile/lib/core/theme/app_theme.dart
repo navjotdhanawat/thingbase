@@ -52,14 +52,15 @@ class BrandingConfig {
     );
   }
 
-  /// Default branding for fallback
+  /// Default branding for fallback - ThingBase brand colors
+  /// Color Palette: Uber-inspired - Black & White with Safety Blue
   static const defaultBranding = BrandingConfig(
     tenantId: '',
-    tenantName: 'IoT Platform',
-    primaryColor: '#6366F1',
-    secondaryColor: '#8B5CF6',
-    accentColor: '#F59E0B',
-    appName: 'IoT Companion',
+    tenantName: 'ThingBase',
+    primaryColor: '#000000',    // Pure Black - main brand color
+    secondaryColor: '#276EF1',   // Safety Blue - CTAs, buttons
+    accentColor: '#47B275',      // Uber Green - success, online
+    appName: 'ThingBase',
     fontFamily: 'Inter',
   );
 }
@@ -126,35 +127,96 @@ final darkThemeProvider = Provider<ThemeData>((ref) {
 ThemeData _buildTheme(BrandingConfig branding, Brightness brightness) {
   final primaryColor = _hexToColor(branding.primaryColor);
   final secondaryColor = _hexToColor(branding.secondaryColor);
-
-  final colors = FlexSchemeColor(
-    primary: primaryColor,
-    primaryContainer: primaryColor.withOpacity(brightness == Brightness.dark ? 0.2 : 0.1),
-    secondary: secondaryColor,
-    secondaryContainer: secondaryColor.withOpacity(brightness == Brightness.dark ? 0.2 : 0.1),
-  );
+  final accentColor = branding.accentColor != null 
+      ? _hexToColor(branding.accentColor!) 
+      : secondaryColor;
 
   final fontFamily = branding.fontFamily ?? GoogleFonts.inter().fontFamily;
 
   if (brightness == Brightness.light) {
+    final colors = FlexSchemeColor(
+      primary: secondaryColor,  // Use blue as primary for actions
+      primaryContainer: secondaryColor.withOpacity(0.1),
+      secondary: primaryColor,
+      secondaryContainer: primaryColor.withOpacity(0.1),
+    );
+    
     return FlexThemeData.light(
       colors: colors,
       surfaceMode: FlexSurfaceMode.highScaffoldLowSurface,
-      blendLevel: 12,
+      blendLevel: 4,  // Minimal blending
       subThemesData: _subThemes,
       visualDensity: FlexColorScheme.comfortablePlatformDensity,
       useMaterial3: true,
       fontFamily: fontFamily,
     );
   } else {
+    // Dark mode - Uber-inspired pure black with minimal blending
+    final colors = FlexSchemeColor(
+      primary: secondaryColor,  // Safety Blue for actions
+      primaryContainer: secondaryColor.withOpacity(0.15),
+      secondary: accentColor,   // Green for accents
+      secondaryContainer: accentColor.withOpacity(0.15),
+    );
+    
     return FlexThemeData.dark(
       colors: colors,
-      surfaceMode: FlexSurfaceMode.highScaffoldLowSurface,
-      blendLevel: 15,
+      surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,  // Cleaner surfaces
+      blendLevel: 0,  // NO blending - pure black/gray
+      darkIsTrueBlack: true,  // Use true black (#000000)
       subThemesData: _subThemes,
       visualDensity: FlexColorScheme.comfortablePlatformDensity,
       useMaterial3: true,
       fontFamily: fontFamily,
+    ).copyWith(
+      // Override specific colors for cleaner dark mode
+      scaffoldBackgroundColor: const Color(0xFF000000),  // Pure black
+      cardColor: const Color(0xFF1A1A1A),  // Dark gray cards
+      dialogBackgroundColor: const Color(0xFF1A1A1A),
+      // Fix card theme with proper elevation and border
+      cardTheme: CardThemeData(
+        color: const Color(0xFF1A1A1A),
+        elevation: 0,  // Flat cards
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: Colors.white.withOpacity(0.08),  // Subtle border
+            width: 1,
+          ),
+        ),
+      ),
+      // Fix bottom navigation bar colors
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: const Color(0xFF000000),
+        selectedItemColor: secondaryColor,  // Use Safety Blue
+        unselectedItemColor: Colors.white.withOpacity(0.6),
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+      ),
+      // Fix navigation bar (Material 3) colors
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: const Color(0xFF000000),
+        indicatorColor: secondaryColor.withOpacity(0.2),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return IconThemeData(color: secondaryColor);  // Blue when selected
+          }
+          return IconThemeData(color: Colors.white.withOpacity(0.6));
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return TextStyle(color: secondaryColor, fontSize: 12);
+          }
+          return TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12);
+        }),
+      ),
+      // Fix list tiles
+      listTileTheme: ListTileThemeData(
+        tileColor: const Color(0xFF1A1A1A),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
     );
   }
 }

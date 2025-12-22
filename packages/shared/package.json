@@ -1,6 +1,6 @@
 {
-  "name": "@repo/shared",
-  "version": "0.0.1",
+  "name": "@thingbase/shared",
+  "version": "1.0.0",
   "private": true,
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -26,4 +26,3 @@
     "typescript": "^5.7.2"
   }
 }
-

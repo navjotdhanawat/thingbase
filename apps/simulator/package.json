@@ -1,6 +1,6 @@
 {
-  "name": "@repo/simulator",
-  "version": "0.0.1",
+  "name": "@thingbase/simulator",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "bin": {
@@ -12,7 +12,7 @@
     "start": "node dist/cli.js"
   },
   "dependencies": {
-    "@repo/shared": "workspace:*",
+    "@thingbase/shared": "workspace:*",
     "commander": "^12.0.0",
     "mqtt": "^5.14.0",
     "chalk": "^5.3.0",
@@ -25,5 +25,3 @@
     "typescript": "^5.3.0"
   }
 }
-
-

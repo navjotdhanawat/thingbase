@@ -1,5 +1,5 @@
-name: iot_companion
-description: "White-label IoT companion app for device management and real-time control"
+name: thingbase
+description: "ThingBase - IoT device management and real-time control platform"
 publish_to: 'none'
 version: 1.0.0+1
 

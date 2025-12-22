@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="docs/architecture.png" alt="IoT SaaS Platform Architecture" width="900"/>
+  <img src="docs/architecture.png" alt="ThingBase Architecture" width="900"/>
 </p>
 
-<h1 align="center">🌐 IoT SaaS Platform</h1>
+<h1 align="center">🔌 ThingBase</h1>
 
 <p align="center">
-  <strong>A production-ready, multi-tenant IoT platform for device management, real-time control, and telemetry visualization.</strong>
+  <strong>Open-source IoT platform for developers. Device management, real-time telemetry, and multi-tenant control.</strong>
 </p>
 
 <p align="center">
@@ -19,10 +19,10 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen" alt="Node Version"/>
-  <img src="https://img.shields.io/badge/pnpm-%3E%3D9.0.0-orange" alt="pnpm Version"/>
-  <img src="https://img.shields.io/badge/flutter-%3E%3D3.10-blue" alt="Flutter Version"/>
-  <img src="https://img.shields.io/badge/license-MIT-green" alt="License"/>
+  <img src="https://img.shields.io/badge/node-%3E%3D20.0.0-000000" alt="Node Version"/>
+  <img src="https://img.shields.io/badge/pnpm-%3E%3D9.0.0-000000" alt="pnpm Version"/>
+  <img src="https://img.shields.io/badge/flutter-%3E%3D3.10-000000" alt="Flutter Version"/>
+  <img src="https://img.shields.io/badge/license-MIT-276ef1" alt="License"/>
 </p>
 
 ---

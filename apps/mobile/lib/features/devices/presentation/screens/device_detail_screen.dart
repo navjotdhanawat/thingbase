@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -20,6 +21,8 @@ class DeviceDetailScreen extends ConsumerStatefulWidget {
 class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
   Map<String, dynamic> _realtimeState = {};
   bool _isConnected = false;
+  StreamSubscription? _connectionSubscription;
+  StreamSubscription? _telemetrySubscription;
 
   @override
   void initState() {
@@ -33,14 +36,14 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
     socketService.subscribeToDevice(widget.deviceId);
 
     // Listen to connection status
-    socketService.connectionStream.listen((connected) {
+    _connectionSubscription = socketService.connectionStream.listen((connected) {
       if (mounted) {
         setState(() => _isConnected = connected);
       }
     });
 
     // Listen to telemetry updates
-    socketService.telemetryStream.listen((event) {
+    _telemetrySubscription = socketService.telemetryStream.listen((event) {
       if (event.deviceId == widget.deviceId && mounted) {
         setState(() {
           _realtimeState = {..._realtimeState, ...event.data};
@@ -51,6 +54,8 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
 
   @override
   void dispose() {
+    _connectionSubscription?.cancel();
+    _telemetrySubscription?.cancel();
     ref.read(socketServiceProvider).unsubscribeFromDevice(widget.deviceId);
     super.dispose();
   }

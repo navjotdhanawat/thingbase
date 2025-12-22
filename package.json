@@ -1,10 +1,10 @@
 {
-  "name": "iot-saas",
-  "version": "0.0.1",
+  "name": "thingbase",
+  "version": "1.0.0",
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "scripts": {
-    "start": "turbo dev --filter=@repo/api --filter=@repo/web --filter=@repo/shared",
+    "start": "turbo dev --filter=@thingbase/api --filter=@thingbase/web --filter=@thingbase/shared",
     "dev": "turbo dev",
     "build": "turbo build",
     "lint": "turbo lint",
@@ -23,5 +23,3 @@
     "node": ">=20.0.0"
   }
 }
-
-

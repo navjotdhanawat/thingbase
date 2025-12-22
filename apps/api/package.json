@@ -1,6 +1,6 @@
 {
-  "name": "@repo/api",
-  "version": "0.0.1",
+  "name": "@thingbase/api",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "build": "nest build",
@@ -31,7 +31,7 @@
     "@nestjs/throttler": "^6.5.0",
     "@nestjs/websockets": "^11.1.9",
     "@prisma/client": "^6.8.0",
-    "@repo/shared": "workspace:*",
+    "@thingbase/shared": "workspace:*",
     "bcryptjs": "^3.0.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
