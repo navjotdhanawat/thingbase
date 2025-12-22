@@ -24,9 +24,14 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
   bool _isConnected = false;
   StreamSubscription? _connectionSubscription;
   StreamSubscription? _telemetrySubscription;
+  StreamSubscription? _statusSubscription;
   final Set<String> _pendingCommands = {};
   SocketService? _socketService; // Store reference to avoid using ref after dispose
   bool _isDisposed = false;
+  
+  // Real-time device status
+  bool? _realtimeOnline;
+  String? _realtimeLastSeen;
 
   @override
   void initState() {
@@ -53,10 +58,29 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
       if (event.deviceId == widget.deviceId && mounted && !_isDisposed) {
         setState(() {
           _realtimeState = {..._realtimeState, ...event.data};
+          
+          // Update lastSeen from event data or timestamp
+          final lastSeenFromData = event.data['lastSeen'];
+          _realtimeLastSeen = lastSeenFromData?.toString() ?? event.timestamp;
+          
+          // Update online status from event data or infer from telemetry receipt
+          final onlineFromData = event.data['online'];
+          _realtimeOnline = onlineFromData is bool ? onlineFromData : true;
+          
           // Clear pending state for keys that have been updated
           for (final key in event.data.keys) {
             _pendingCommands.remove(key);
           }
+        });
+      }
+    });
+
+    // Listen to status updates (online/offline)
+    _statusSubscription = _socketService?.statusStream.listen((event) {
+      if (event.deviceId == widget.deviceId && mounted && !_isDisposed) {
+        setState(() {
+          _realtimeOnline = event.online;
+          _realtimeLastSeen = event.timestamp;
         });
       }
     });
@@ -67,8 +91,10 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
     _isDisposed = true;
     _connectionSubscription?.cancel();
     _telemetrySubscription?.cancel();
+    _statusSubscription?.cancel();
     _connectionSubscription = null;
     _telemetrySubscription = null;
+    _statusSubscription = null;
     // Use stored reference instead of ref.read
     _socketService?.unsubscribeFromDevice(widget.deviceId);
     super.dispose();
@@ -325,8 +351,11 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
 
   Widget _buildStatusCard(BuildContext context, Map<String, dynamic> device) {
     final theme = Theme.of(context);
+    
+    // Use real-time status if available, otherwise fall back to API data
     final status = device['status'] ?? 'pending';
-    final isOnline = status == 'online';
+    final isOnline = _realtimeOnline ?? (status == 'online');
+    final lastSeen = _realtimeLastSeen ?? device['lastSeen'];
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -359,16 +388,53 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  isOnline ? 'Online' : status.toString().toUpperCase(),
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      isOnline ? 'Online' : status.toString().toUpperCase(),
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    // Real-time indicator
+                    if (_realtimeOnline != null) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'LIVE',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 9,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-                if (device['lastSeen'] != null)
+                if (lastSeen != null)
                   Text(
-                    'Last seen: ${_formatLastSeen(device['lastSeen'])}',
+                    'Last seen: ${_formatLastSeen(lastSeen)}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: Colors.white.withOpacity(0.8),
                     ),

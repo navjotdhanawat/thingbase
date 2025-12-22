@@ -7,17 +7,64 @@ export enum Role {
 }
 
 /**
+ * Response metadata for tracking and debugging
+ */
+export interface ResponseMeta {
+  requestId: string;
+  timestamp: string;
+}
+
+/**
+ * Standardized error response structure
+ */
+export interface ApiError {
+  code: string;
+  message: string;
+  details?: Record<string, unknown>;
+}
+
+/**
  * API Response wrapper
  */
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
-  error?: {
-    code: string;
-    message: string;
-    details?: Record<string, unknown>;
-  };
+  error?: ApiError;
+  meta?: ResponseMeta;
 }
+
+/**
+ * Standardized error codes used across all API endpoints
+ */
+export const ERROR_CODES = {
+  // Authentication & Authorization
+  UNAUTHORIZED: 'UNAUTHORIZED',
+  FORBIDDEN: 'FORBIDDEN',
+  INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
+  TOKEN_EXPIRED: 'TOKEN_EXPIRED',
+
+  // Validation
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
+  BAD_REQUEST: 'BAD_REQUEST',
+
+  // Resources
+  NOT_FOUND: 'NOT_FOUND',
+  CONFLICT: 'CONFLICT',
+
+  // Rate limiting
+  RATE_LIMITED: 'RATE_LIMITED',
+
+  // Server errors
+  INTERNAL_ERROR: 'INTERNAL_ERROR',
+  SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
+
+  // Device-specific
+  DEVICE_OFFLINE: 'DEVICE_OFFLINE',
+  DEVICE_NOT_PROVISIONED: 'DEVICE_NOT_PROVISIONED',
+  COMMAND_TIMEOUT: 'COMMAND_TIMEOUT',
+} as const;
+
+export type ErrorCode = typeof ERROR_CODES[keyof typeof ERROR_CODES];
 
 /**
  * Paginated response

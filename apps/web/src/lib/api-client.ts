@@ -3,7 +3,24 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1
 interface ApiError {
   message: string;
   code?: string;
-  errors?: Array<{ field: string; message: string }>;
+  details?: Record<string, unknown>;
+  requestId?: string;
+}
+
+interface ResponseMeta {
+  requestId: string;
+  timestamp: string;
+}
+
+interface ApiResponseWrapper<T> {
+  success: boolean;
+  data?: T;
+  error?: {
+    code: string;
+    message: string;
+    details?: Record<string, unknown>;
+  };
+  meta?: ResponseMeta;
 }
 
 interface PaginatedResponse<T> {
@@ -41,19 +58,29 @@ class ApiClient {
       headers,
     });
 
-    const data = await res.json();
+    const response: ApiResponseWrapper<T> = await res.json();
 
-    if (!res.ok) {
+    if (!res.ok || !response.success) {
       const error: ApiError = {
-        message: data.message || 'An error occurred',
-        code: data.code,
-        errors: data.errors,
+        message: response.error?.message || 'An error occurred',
+        code: response.error?.code,
+        details: response.error?.details,
+        requestId: response.meta?.requestId,
       };
+
+      // Log error with request ID for debugging
+      console.error(
+        `[API Error] ${error.code || 'UNKNOWN'}: ${error.message}`,
+        error.requestId ? `(requestId: ${error.requestId})` : ''
+      );
+
       throw error;
     }
 
-    return data.data ?? data;
+    // Return data directly, or fall back to entire response for backward compatibility
+    return (response.data ?? response) as T;
   }
+
 
   // Auth
   async register(data: {

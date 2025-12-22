@@ -81,13 +81,19 @@ export class MqttHandlers implements OnModuleInit {
       );
 
       // Publish update to Redis channel for WebSocket fan-out
+      const timestamp = new Date().toISOString();
       await this.redis.publish(
         REDIS_KEYS.DEVICE_UPDATES_CHANNEL(tenantId),
         JSON.stringify({
           type: 'device:telemetry',
           deviceId,
-          data: { ...data, ...telemetryData }, // Send flattened data to frontend
-          timestamp: new Date().toISOString(),
+          data: {
+            ...data,
+            ...telemetryData,
+            online: true,
+            lastSeen: timestamp,
+          }, // Send flattened data with status to frontend
+          timestamp,
         }),
       );
 
