@@ -1,7 +1,23 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/app_config.dart';
 import '../storage/secure_storage.dart';
+
+/// Auth event types
+enum AuthEvent {
+  tokenRefreshed,
+  sessionExpired,
+  loggedOut,
+}
+
+/// Global auth event controller - used to signal auth state changes
+final authEventController = StreamController<AuthEvent>.broadcast();
+
+/// Stream provider for auth events
+final authEventProvider = StreamProvider<AuthEvent>((ref) {
+  return authEventController.stream;
+});
 
 /// Dio HTTP client provider
 final dioProvider = Provider<Dio>((ref) {
@@ -26,9 +42,15 @@ final dioProvider = Provider<Dio>((ref) {
   return dio;
 });
 
-/// Auth interceptor for JWT token handling
+/// Auth interceptor for JWT token handling with proper refresh logic
 class AuthInterceptor extends Interceptor {
   final Ref _ref;
+  
+  // Lock to prevent concurrent token refresh
+  bool _isRefreshing = false;
+  
+  // Queue of requests waiting for token refresh
+  final List<({RequestOptions options, ErrorInterceptorHandler handler})> _pendingRequests = [];
 
   AuthInterceptor(this._ref);
 
@@ -53,23 +75,71 @@ class AuthInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
     if (err.response?.statusCode == 401) {
-      // Try to refresh token
-      final refreshed = await _refreshToken();
-      if (refreshed) {
-        // Retry original request
-        try {
+      // Skip refresh for auth endpoints to avoid infinite loop
+      if (err.requestOptions.path.contains('/auth/')) {
+        handler.next(err);
+        return;
+      }
+
+      // If already refreshing, queue this request
+      if (_isRefreshing) {
+        _pendingRequests.add((options: err.requestOptions, handler: handler));
+        return;
+      }
+
+      _isRefreshing = true;
+
+      try {
+        final refreshed = await _refreshToken();
+        
+        if (refreshed) {
+          // Retry the original request
           final response = await _retry(err.requestOptions);
           handler.resolve(response);
-          return;
+          
+          // Process queued requests
+          _processQueue(true);
+        } else {
+          // Refresh failed - session expired
+          await _handleSessionExpired();
+          handler.next(err);
+          _processQueue(false);
+        }
+      } catch (e) {
+        await _handleSessionExpired();
+        handler.next(err);
+        _processQueue(false);
+      } finally {
+        _isRefreshing = false;
+      }
+      return;
+    }
+    
+    handler.next(err);
+  }
+
+  /// Process queued requests after token refresh
+  void _processQueue(bool success) async {
+    for (final pending in _pendingRequests) {
+      if (success) {
+        try {
+          final response = await _retry(pending.options);
+          pending.handler.resolve(response);
         } catch (e) {
-          // Refresh failed, logout
-          await _logout();
+          pending.handler.reject(DioException(
+            requestOptions: pending.options,
+            error: e,
+          ));
         }
       } else {
-        await _logout();
+        pending.handler.reject(DioException(
+          requestOptions: pending.options,
+          error: 'Session expired',
+          type: DioExceptionType.unknown,
+        ));
       }
     }
-    handler.next(err);
+    _pendingRequests.clear();
   }
 
   Future<bool> _refreshToken() async {
@@ -77,8 +147,14 @@ class AuthInterceptor extends Interceptor {
       final storage = _ref.read(secureStorageProvider);
       final refreshToken = await storage.getRefreshToken();
       
-      if (refreshToken == null) return false;
+      if (refreshToken == null) {
+        print('📡 No refresh token available');
+        return false;
+      }
 
+      print('📡 Attempting token refresh...');
+      
+      // Use a separate Dio instance to avoid interceptor loop
       final dio = Dio(BaseOptions(baseUrl: AppConfig.current.apiBaseUrl));
       final response = await dio.post('/auth/refresh', data: {
         'refreshToken': refreshToken,
@@ -90,10 +166,15 @@ class AuthInterceptor extends Interceptor {
           accessToken: data['accessToken'],
           refreshToken: data['refreshToken'],
         );
+        print('📡 Token refreshed successfully');
+        authEventController.add(AuthEvent.tokenRefreshed);
         return true;
       }
+      
+      print('📡 Token refresh failed: ${response.data}');
       return false;
     } catch (e) {
+      print('📡 Token refresh error: $e');
       return false;
     }
   }
@@ -110,7 +191,8 @@ class AuthInterceptor extends Interceptor {
       },
     );
 
-    final dio = _ref.read(dioProvider);
+    // Use a fresh Dio to avoid recursive interceptor calls
+    final dio = Dio(BaseOptions(baseUrl: AppConfig.current.apiBaseUrl));
     return dio.request(
       requestOptions.path,
       data: requestOptions.data,
@@ -119,10 +201,13 @@ class AuthInterceptor extends Interceptor {
     );
   }
 
-  Future<void> _logout() async {
+  Future<void> _handleSessionExpired() async {
+    print('📡 Session expired - logging out');
     final storage = _ref.read(secureStorageProvider);
-    await storage.clearTokens();
-    // Navigate to login will be handled by auth state
+    await storage.clearAll();
+    
+    // Notify listeners that session has expired
+    authEventController.add(AuthEvent.sessionExpired);
   }
 }
 
@@ -174,4 +259,3 @@ class ApiError {
     );
   }
 }
-

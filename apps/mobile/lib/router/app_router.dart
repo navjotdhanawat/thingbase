@@ -42,12 +42,33 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/auth/login',
         name: 'login',
-        builder: (context, state) => const LoginScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const LoginScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
       ),
       GoRoute(
         path: '/auth/register',
         name: 'register',
-        builder: (context, state) => const RegisterScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const RegisterScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1.0, 0.0),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              )),
+              child: child,
+            );
+          },
+        ),
       ),
 
       // ═══════════════════════════════════════════════════════════════════════
@@ -59,19 +80,39 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/dashboard',
             name: 'dashboard',
-            builder: (context, state) => const DashboardScreen(),
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: DashboardScreen(),
+            ),
           ),
           GoRoute(
             path: '/devices',
             name: 'devices',
-            builder: (context, state) => const DevicesListScreen(),
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: DevicesListScreen(),
+            ),
             routes: [
               GoRoute(
                 path: ':id',
                 name: 'device-detail',
-                builder: (context, state) {
+                pageBuilder: (context, state) {
                   final deviceId = state.pathParameters['id']!;
-                  return DeviceDetailScreen(deviceId: deviceId);
+                  return CustomTransitionPage(
+                    key: state.pageKey,
+                    child: DeviceDetailScreen(deviceId: deviceId),
+                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                      // Slide in from right with iOS-style curve
+                      return SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(1.0, 0.0),
+                          end: Offset.zero,
+                        ).animate(CurvedAnimation(
+                          parent: animation,
+                          curve: Curves.easeOutCubic,
+                        )),
+                        child: child,
+                      );
+                    },
+                  );
                 },
               ),
             ],
@@ -79,12 +120,16 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/alerts',
             name: 'alerts',
-            builder: (context, state) => const AlertsScreen(),
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: AlertsScreen(),
+            ),
           ),
           GoRoute(
             path: '/settings',
             name: 'settings',
-            builder: (context, state) => const SettingsScreen(),
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: SettingsScreen(),
+            ),
           ),
         ],
       ),
@@ -95,7 +140,23 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/add-device',
         name: 'add-device',
-        builder: (context, state) => const AddDeviceScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const AddDeviceScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            // Slide up from bottom for modal-style screens
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0.0, 1.0),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              )),
+              child: child,
+            );
+          },
+        ),
       ),
     ],
   );

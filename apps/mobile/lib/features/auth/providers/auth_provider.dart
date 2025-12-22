@@ -45,6 +45,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   AuthNotifier(this._ref) : super(const AuthState()) {
     _initAuth();
+    _listenToAuthEvents();
+  }
+
+  /// Listen to auth events (like session expired)
+  void _listenToAuthEvents() {
+    authEventController.stream.listen((event) {
+      if (event == AuthEvent.sessionExpired || event == AuthEvent.loggedOut) {
+        // Reset state to logged out
+        state = const AuthState();
+      }
+    });
   }
 
   /// Check for existing session on app start
@@ -104,7 +115,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       return false;
     } on DioException catch (e) {
-      final message = e.response?.data?['error']?['message'] ?? 'Login failed';
+      String message = 'Login failed';
+      if (e.response?.data != null) {
+        final data = e.response!.data;
+        if (data is Map) {
+          message = data['message'] ?? data['error'] ?? 'Login failed';
+        }
+      }
       state = state.copyWith(isLoading: false, error: message);
       return false;
     } catch (e) {
@@ -160,7 +177,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       return false;
     } on DioException catch (e) {
-      final message = e.response?.data?['error']?['message'] ?? 'Registration failed';
+      String message = 'Registration failed';
+      if (e.response?.data != null) {
+        final data = e.response!.data;
+        if (data is Map) {
+          message = data['message'] ?? data['error'] ?? 'Registration failed';
+        }
+      }
       state = state.copyWith(isLoading: false, error: message);
       return false;
     } catch (e) {

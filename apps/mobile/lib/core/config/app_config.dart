@@ -12,8 +12,8 @@ class AppConfig {
 
   /// Development configuration
   static const dev = AppConfig(
-    apiBaseUrl: 'http://localhost:3001/api/v1',
-    wsBaseUrl: 'http://localhost:3001',
+    apiBaseUrl: 'https://e074c0881189.ngrok-free.app/api/v1',
+    wsBaseUrl: 'https://e074c0881189.ngrok-free.app',
     isProduction: false,
   );
 

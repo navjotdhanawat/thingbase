@@ -200,7 +200,36 @@ class DeviceDetailScreen extends ConsumerWidget {
 
   Widget _buildStateGrid(BuildContext context, Map<String, dynamic> state) {
     final theme = Theme.of(context);
-    final entries = state.entries.where((e) => e.key != 'lastUpdate').toList();
+    
+    // Flatten nested telemetry data if present
+    final Map<String, dynamic> flatState = {};
+    
+    for (final entry in state.entries) {
+      // Skip metadata fields
+      if (entry.key == 'lastUpdate' || 
+          entry.key == 'timestamp' || 
+          entry.key == 'online' || 
+          entry.key == 'lastSeen') continue;
+      
+      if (entry.value is Map) {
+        // Flatten nested maps
+        final nestedMap = entry.value as Map;
+        for (final nestedEntry in nestedMap.entries) {
+          flatState[nestedEntry.key.toString()] = nestedEntry.value;
+        }
+      } else {
+        flatState[entry.key] = entry.value;
+      }
+    }
+    
+    // Filter out non-displayable values
+    final entries = flatState.entries
+        .where((e) => e.value != null && 
+                      e.key != 'lastUpdate' && 
+                      e.key != 'timestamp' &&
+                      !(e.value is Map) &&
+                      !(e.value is List))
+        .toList();
 
     if (entries.isEmpty) {
       return _buildNoDataCard(context);
@@ -211,15 +240,18 @@ class DeviceDetailScreen extends ConsumerWidget {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 1.5,
+        childAspectRatio: 1.6,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
-      itemCount: entries.length,
+      itemCount: entries.length > 6 ? 6 : entries.length, // Limit to 6 items
       itemBuilder: (context, index) {
         final entry = entries[index];
+        final formattedValue = _formatValue(entry.value);
+        final unit = _getUnit(entry.key);
+        
         return Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(16),
@@ -227,20 +259,43 @@ class DeviceDetailScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                _formatValue(entry.value),
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      formattedValue,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    if (unit.isNotEmpty) ...[
+                      const SizedBox(width: 4),
+                      Text(
+                        unit,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.primary.withOpacity(0.7),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               Text(
                 _formatKey(entry.key),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -367,13 +422,41 @@ class DeviceDetailScreen extends ConsumerWidget {
   }
 
   String _formatValue(dynamic value) {
+    if (value == null) return '-';
     if (value is num) {
+      if (value.abs() >= 1000) {
+        return '${(value / 1000).toStringAsFixed(1)}k';
+      }
       return value.toStringAsFixed(value.truncateToDouble() == value ? 0 : 1);
     }
     if (value is bool) {
       return value ? 'ON' : 'OFF';
     }
-    return value.toString();
+    final str = value.toString();
+    // Truncate long strings
+    if (str.length > 10) {
+      return '${str.substring(0, 10)}...';
+    }
+    return str;
+  }
+
+  String _getUnit(String key) {
+    final lowerKey = key.toLowerCase();
+    if (lowerKey.contains('temp')) return '°C';
+    if (lowerKey.contains('humidity') || lowerKey.contains('moisture')) return '%';
+    if (lowerKey.contains('pressure')) return 'hPa';
+    if (lowerKey.contains('battery')) return '%';
+    if (lowerKey.contains('voltage')) return 'V';
+    if (lowerKey.contains('current')) return 'A';
+    if (lowerKey.contains('power') && !lowerKey.contains('on')) return 'W';
+    if (lowerKey.contains('energy')) return 'kWh';
+    if (lowerKey.contains('flow')) return 'L/m';
+    if (lowerKey.contains('rssi') || lowerKey.contains('signal')) return 'dBm';
+    if (lowerKey.contains('speed')) return 'km/h';
+    if (lowerKey.contains('distance')) return 'm';
+    if (lowerKey.contains('weight')) return 'kg';
+    if (lowerKey.contains('ph')) return 'pH';
+    return '';
   }
 }
 
