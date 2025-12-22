@@ -1,16 +1,15 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { 
-  CreateDeviceTypeInput, 
-  UpdateDeviceTypeInput, 
+import {
+  CreateDeviceTypeInput,
+  UpdateDeviceTypeInput,
   DEVICE_TYPE_PRESETS,
   DeviceTypeSchema,
 } from '@thingbase/shared';
-import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class DeviceTypesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   /**
    * Create a new device type
@@ -33,7 +32,7 @@ export class DeviceTypesService {
         description: input.description,
         icon: input.icon || 'cpu',
         color: input.color || '#6366f1',
-        schema: input.schema as unknown as Prisma.InputJsonValue,
+        schema: JSON.parse(JSON.stringify(input.schema)),
         isSystem: false,
       },
     });
@@ -65,7 +64,7 @@ export class DeviceTypesService {
         description: preset.description,
         icon: preset.icon || 'cpu',
         color: preset.color || '#6366f1',
-        schema: preset.schema as unknown as Prisma.InputJsonValue,
+        schema: JSON.parse(JSON.stringify(preset.schema)),
         isSystem: true, // Presets are marked as system
       },
     });
@@ -151,7 +150,7 @@ export class DeviceTypesService {
         description: input.description,
         icon: input.icon,
         color: input.color,
-        schema: input.schema ? (input.schema as unknown as Prisma.InputJsonValue) : undefined,
+        schema: input.schema ? JSON.parse(JSON.stringify(input.schema)) : undefined,
       },
     });
   }
@@ -187,7 +186,7 @@ export class DeviceTypesService {
       select: { slug: true },
     });
 
-    const existingSlugs = new Set(existingTypes.map((t) => t.slug));
+    const existingSlugs = new Set(existingTypes.map((t: { slug: string }) => t.slug));
 
     return Object.entries(DEVICE_TYPE_PRESETS)
       .filter(([slug]) => !existingSlugs.has(slug))

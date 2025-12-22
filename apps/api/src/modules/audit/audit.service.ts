@@ -24,7 +24,7 @@ interface AuditLogQueryParams {
 export class AuditService {
   private readonly logger = new Logger(AuditService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   /**
    * Create an audit log entry
@@ -92,7 +92,7 @@ export class AuditService {
     ]);
 
     return {
-      items: logs.map((log) => ({
+      items: logs.map((log: { id: string; action: string; resourceType: string | null; resourceId: string | null; metadata: unknown; createdAt: Date; user: { id: string; email: string; name: string | null } | null }) => ({
         id: log.id,
         action: log.action,
         resourceType: log.resourceType,
@@ -101,10 +101,10 @@ export class AuditService {
         createdAt: log.createdAt,
         user: log.user
           ? {
-              id: log.user.id,
-              email: log.user.email,
-              name: log.user.name,
-            }
+            id: log.user.id,
+            email: log.user.email,
+            name: log.user.name,
+          }
           : null,
       })),
       total,
@@ -144,17 +144,17 @@ export class AuditService {
     ]);
 
     return {
-      items: logs.map((log) => ({
+      items: logs.map((log: { id: string; action: string; metadata: unknown; createdAt: Date; user: { id: string; email: string; name: string | null } | null }) => ({
         id: log.id,
         action: log.action,
         metadata: log.metadata,
         createdAt: log.createdAt,
         user: log.user
           ? {
-              id: log.user.id,
-              email: log.user.email,
-              name: log.user.name,
-            }
+            id: log.user.id,
+            email: log.user.email,
+            name: log.user.name,
+          }
           : null,
       })),
       total,
@@ -174,7 +174,7 @@ export class AuditService {
       select: { action: true },
     });
 
-    return result.map((r) => r.action);
+    return result.map((r: { action: string }) => r.action);
   }
 
   /**
@@ -187,7 +187,7 @@ export class AuditService {
       select: { resourceType: true },
     });
 
-    return result.map((r) => r.resourceType).filter(Boolean) as string[];
+    return result.map((r: { resourceType: string | null }) => r.resourceType).filter(Boolean) as string[];
   }
 }
 

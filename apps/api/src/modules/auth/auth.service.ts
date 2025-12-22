@@ -8,6 +8,7 @@ import { EmailService } from '../email/email.service';
 import { REDIS_KEYS } from '@thingbase/shared';
 import type { Register, Login, AuthTokens, JwtPayload, ForgotPassword, ResetPassword, ChangePassword, UpdateProfile } from '@thingbase/shared';
 import { randomUUID, createHash, randomBytes } from 'crypto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -19,7 +20,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly redis: RedisService,
     private readonly email: EmailService,
-  ) {}
+  ) { }
 
   /**
    * Register a new tenant with admin user
@@ -47,7 +48,7 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
     // Create tenant and admin user in transaction
-    const { tenant, user } = await this.prisma.$transaction(async (tx) => {
+    const { tenant, user } = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const tenant = await tx.tenant.create({
         data: {
           name: dto.tenantName,

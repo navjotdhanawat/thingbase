@@ -36,7 +36,7 @@ interface AlertQueryParams {
 export class AlertsService {
   private readonly logger = new Logger(AlertsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   // ============================================================================
   // ALERT RULES
@@ -73,7 +73,7 @@ export class AlertsService {
     ]);
 
     return {
-      items: rules.map((rule) => ({
+      items: rules.map((rule: { id: string; name: string; type: string; condition: unknown; enabled: boolean; deviceId: string | null; device: { name: string } | null; _count: { alerts: number }; createdAt: Date; updatedAt: Date }) => ({
         id: rule.id,
         name: rule.name,
         type: rule.type,
@@ -224,7 +224,7 @@ export class AlertsService {
     ]);
 
     return {
-      items: alerts.map((alert) => ({
+      items: alerts.map((alert: { id: string; ruleId: string; rule: { name: string; type: string }; deviceId: string; status: string; metadata: unknown; triggeredAt: Date; resolvedAt: Date | null }) => ({
         id: alert.id,
         ruleId: alert.ruleId,
         ruleName: alert.rule.name,

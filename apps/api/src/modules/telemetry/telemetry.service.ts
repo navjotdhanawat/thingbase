@@ -77,7 +77,7 @@ export class TelemetryService {
       take: limit,
     });
 
-    return telemetry.map((t) => ({
+    return telemetry.map((t: { timestamp: Date; data: unknown }) => ({
       timestamp: t.timestamp,
       data: t.data as Record<string, unknown>,
     }));
@@ -516,18 +516,18 @@ export class TelemetryService {
     ]);
 
     // Get device names for the breakdown
-    const deviceIds = breakdown.map(b => b.deviceId);
+    const deviceIds = breakdown.map((b: { deviceId: string; _count: { id: number } }) => b.deviceId);
     const devices = await this.prisma.device.findMany({
       where: { id: { in: deviceIds } },
       select: { id: true, name: true },
     });
-    const deviceMap = new Map(devices.map(d => [d.id, d.name]));
+    const deviceMap = new Map(devices.map((d: { id: string; name: string }) => [d.id, d.name]));
 
     return {
       totalRecords,
       oldestRecord: oldest?.timestamp || null,
       newestRecord: newest?.timestamp || null,
-      deviceBreakdown: breakdown.map(b => ({
+      deviceBreakdown: breakdown.map((b: { deviceId: string; _count: { id: number } }) => ({
         deviceId: b.deviceId,
         deviceName: deviceMap.get(b.deviceId) || 'Unknown',
         count: b._count.id,
