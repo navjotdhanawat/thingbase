@@ -112,22 +112,58 @@ NEXT_PUBLIC_MQTT_BROKER_URL=mqtt://${{Mosquitto.RAILWAY_PUBLIC_DOMAIN}}:1883
 
 ---
 
-## Step 7: Run Database Migrations
+## Step 7: Database Migrations
 
-After the API is deployed:
+### Option A: Automatic via CI/CD (Recommended)
 
-1. Open the API service in Railway
-2. Go to **"Settings"** → **"Deploy"**
-3. Add a one-time deploy command:
+Database migrations are handled automatically by GitHub Actions when you push to `main`:
+
+1. **Add GitHub Secrets** (Settings → Secrets → Actions):
+   - `DATABASE_URL`: Your external PostgreSQL connection string
+   - `RAILWAY_TOKEN`: Get from [Railway Account Tokens](https://railway.app/account/tokens)
+
+2. **Push to main** - The CI/CD pipeline will:
+   - ✅ Build all packages
+   - ✅ Run migrations (`prisma db push`)
+   - ✅ Deploy API and Web services
+
+### Option B: Container Startup Migration
+
+Set the `RUN_MIGRATIONS=true` environment variable on the API service:
+
+```
+RUN_MIGRATIONS=true
+```
+
+The container will run `prisma db push` on every startup.
+
+⚠️ **Warning**: Only use this for initial setup or when you're sure schema changes are safe.
+
+### Option C: Manual Migration
+
+SSH into the service and run migrations manually:
 
 ```bash
+# Using Railway CLI
+railway run -s api -- npx prisma db push
+
+# Or open a shell
+railway shell -s api
 npx prisma db push
 ```
 
-Or SSH into the service:
-```bash
-railway run -s api -- npx prisma db push
-```
+### Migration Best Practices
+
+1. **Always test migrations locally first** before pushing to main
+2. **Use `db:push` for development** - syncs schema without migration history
+3. **For production with migration history**, use:
+   ```bash
+   pnpm --filter=@thingbase/api db:migrate
+   ```
+4. **Check migration status**:
+   ```bash
+   railway run -s api -- npx prisma migrate status
+   ```
 
 ---
 
