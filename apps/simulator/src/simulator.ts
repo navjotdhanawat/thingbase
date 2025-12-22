@@ -1,8 +1,19 @@
 import mqtt, { MqttClient } from 'mqtt';
 import chalk from 'chalk';
-import { MQTT_TOPICS } from '@repo/shared';
+import { MQTT_TOPICS } from '@thingbase/shared';
 
-export type DevicePreset = 'thermostat' | 'switch' | 'water-pump' | 'egg-incubator' | 'soil-sensor' | 'generic';
+export type DevicePreset =
+  | 'thermostat'
+  | 'switch'
+  | 'water-pump'
+  | 'egg-incubator'
+  | 'soil-sensor'
+  | 'generic'
+  // New presets
+  | 'temp-humidity'
+  | 'relay-4ch'
+  | 'led-strip'
+  | 'doorbell';
 
 export interface SimulatorConfig {
   mqttUrl: string;
@@ -33,21 +44,21 @@ const TELEMETRY_GENERATORS: Record<DevicePreset, () => Record<string, unknown>> 
     power: Math.random() > 0.3,
     mode: randomChoice(['off', 'heat', 'cool', 'auto']),
   }),
-  
+
   switch: () => ({
     power: Math.random() > 0.5,
     energy_kwh: randomInRange(0, 15, 2),
     current: randomInRange(0, 15, 2),
     voltage: randomInRange(110, 125, 0),
   }),
-  
+
   'water-pump': () => ({
     running: Math.random() > 0.4,
     flow_rate: randomInRange(0, 100, 1),
     pressure: randomInRange(100, 500, 0),
     motor_temp: randomInRange(30, 65, 1),
   }),
-  
+
   'egg-incubator': () => {
     // Egg incubation specific ranges
     return {
@@ -58,18 +69,51 @@ const TELEMETRY_GENERATORS: Record<DevicePreset, () => Record<string, unknown>> 
       days_elapsed: Math.floor(Math.random() * 21) + 1,
     };
   },
-  
+
   'soil-sensor': () => ({
     moisture: randomInRange(15, 85, 1),
     ph: randomInRange(5.5, 7.5, 1),
     nitrogen: randomInRange(50, 300, 0),
     temperature: randomInRange(12, 28, 1),
   }),
-  
+
   generic: () => ({
     value: randomInRange(0, 100, 2),
     battery: Math.floor(Math.random() * 20 + 80),
     rssi: Math.floor(Math.random() * 40 - 80),
+  }),
+
+  // New device presets
+  'temp-humidity': () => ({
+    temperature: randomInRange(18, 28, 1),
+    humidity: randomInRange(40, 70, 1),
+    battery: Math.floor(Math.random() * 20 + 80),
+    rssi: Math.floor(Math.random() * 40 - 80),
+  }),
+
+  'relay-4ch': () => ({
+    relay1: Math.random() > 0.5,
+    relay2: Math.random() > 0.5,
+    relay3: Math.random() > 0.5,
+    relay4: Math.random() > 0.5,
+    wifi_rssi: Math.floor(Math.random() * 40 - 80),
+    uptime: Math.floor(Math.random() * 86400),
+  }),
+
+  'led-strip': () => ({
+    power: Math.random() > 0.3,
+    brightness: Math.floor(Math.random() * 100),
+    color_r: Math.floor(Math.random() * 255),
+    color_g: Math.floor(Math.random() * 255),
+    color_b: Math.floor(Math.random() * 255),
+    effect: randomChoice(['solid', 'rainbow', 'pulse', 'chase', 'twinkle', 'fire']),
+  }),
+
+  doorbell: () => ({
+    motion_detected: Math.random() > 0.7,
+    door_open: Math.random() > 0.8,
+    battery: Math.floor(Math.random() * 20 + 80),
+    last_ring: Math.random() > 0.9 ? new Date().toISOString() : null,
   }),
 };
 
@@ -94,7 +138,7 @@ export class DeviceSimulator {
     this.config = config;
     this.clientId = `sim-${config.deviceId}-${Date.now()}`;
     this.preset = config.preset || 'thermostat';
-    
+
     // Initialize default state
     this.state = {
       power: true,
@@ -110,7 +154,7 @@ export class DeviceSimulator {
 
       // Configure LWT (Last Will and Testament)
       const statusTopic = MQTT_TOPICS.STATUS(tenantId, deviceId);
-      
+
       this.client = mqtt.connect(mqttUrl, {
         clientId: this.clientId,
         clean: true,
@@ -127,10 +171,10 @@ export class DeviceSimulator {
       this.client.on('connect', () => {
         console.log(chalk.green(`✓ Device ${deviceId} connected to MQTT broker`));
         console.log(chalk.cyan(`  Device Type: ${this.preset}`));
-        
+
         // Publish online status
         this.publishStatus('online');
-        
+
         // Subscribe to command topic
         const commandTopic = MQTT_TOPICS.COMMAND(tenantId, deviceId);
         this.client!.subscribe(commandTopic, { qos: 1 }, (err) => {
@@ -174,7 +218,7 @@ export class DeviceSimulator {
     if (this.client) {
       // Publish offline status
       await this.publishStatus('offline');
-      
+
       return new Promise((resolve) => {
         this.client!.end(false, () => {
           console.log(chalk.gray(`Device ${this.config.deviceId} stopped`));
@@ -186,9 +230,9 @@ export class DeviceSimulator {
 
   private startTelemetry(): void {
     const { telemetryIntervalMs, deviceId } = this.config;
-    
+
     console.log(chalk.blue(`📊 Starting telemetry (every ${telemetryIntervalMs}ms)`));
-    
+
     this.telemetryTimer = setInterval(() => {
       this.publishTelemetry();
     }, telemetryIntervalMs);
@@ -199,11 +243,11 @@ export class DeviceSimulator {
 
   private publishTelemetry(): void {
     const { tenantId, deviceId } = this.config;
-    
+
     // Generate telemetry based on preset
     const generator = TELEMETRY_GENERATORS[this.preset];
     const sensorData = generator();
-    
+
     // Add common fields
     const telemetry = {
       timestamp: new Date().toISOString(),
@@ -216,7 +260,7 @@ export class DeviceSimulator {
 
     const topic = MQTT_TOPICS.TELEMETRY(tenantId, deviceId);
     this.client?.publish(topic, JSON.stringify(telemetry), { qos: 0 });
-    
+
     // Format output based on preset
     const summary = this.formatTelemetrySummary(sensorData);
     console.log(chalk.gray(`  📤 Telemetry: ${summary}`));
@@ -236,7 +280,7 @@ export class DeviceSimulator {
         }
         return `${key}=${value}`;
       });
-    
+
     return entries.join(', ');
   }
 
@@ -266,27 +310,27 @@ export class DeviceSimulator {
       status,
       timestamp: new Date().toISOString(),
     };
-    
+
     this.client?.publish(topic, JSON.stringify(payload), { qos: 1, retain: true });
     console.log(chalk.magenta(`  📡 Status: ${status}`));
   }
 
   private handleCommand(payloadStr: string): void {
     const { tenantId, deviceId, commandFailRate, commandLatencyMs } = this.config;
-    
+
     try {
       const command = JSON.parse(payloadStr);
       const { correlationId, action, params } = command;
-      
+
       console.log(chalk.cyan(`  📥 Command received: ${action} (${correlationId})`));
 
       // Simulate processing delay
       setTimeout(() => {
         // Simulate random failures
         const shouldFail = Math.random() < commandFailRate;
-        
+
         let ackPayload: Record<string, unknown>;
-        
+
         if (shouldFail) {
           ackPayload = {
             correlationId,
@@ -298,7 +342,7 @@ export class DeviceSimulator {
         } else {
           // Process the command
           this.processCommand(action, params);
-          
+
           ackPayload = {
             correlationId,
             status: 'success',
@@ -311,9 +355,9 @@ export class DeviceSimulator {
         // Publish acknowledgement
         const ackTopic = MQTT_TOPICS.ACK(tenantId, deviceId);
         this.client?.publish(ackTopic, JSON.stringify(ackPayload), { qos: 1 });
-        
+
       }, commandLatencyMs);
-      
+
     } catch (error) {
       console.error(chalk.red('Failed to parse command:'), error);
     }
@@ -321,6 +365,13 @@ export class DeviceSimulator {
 
   private processCommand(action: string, params: Record<string, unknown>): void {
     switch (action) {
+      case 'set_state':
+        // Handle dynamic key-value state updates from widget controls
+        for (const [key, value] of Object.entries(params)) {
+          this.state[key] = value;
+          console.log(chalk.blue(`    → Set ${key} = ${JSON.stringify(value)}`));
+        }
+        break;
       case 'setPower':
         this.state.power = params.power as boolean;
         break;
@@ -342,7 +393,15 @@ export class DeviceSimulator {
         };
         break;
       default:
-        console.log(chalk.yellow(`  Unknown action: ${action}`));
+        // Handle any action as a state update if params are provided
+        if (Object.keys(params).length > 0) {
+          for (const [key, value] of Object.entries(params)) {
+            this.state[key] = value;
+            console.log(chalk.blue(`    → Set ${key} = ${JSON.stringify(value)}`));
+          }
+        } else {
+          console.log(chalk.yellow(`  Unknown action: ${action}`));
+        }
     }
   }
 }

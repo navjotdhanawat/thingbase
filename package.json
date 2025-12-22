@@ -4,7 +4,7 @@
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "scripts": {
-    "start": "turbo dev --filter=@thingbase/api --filter=@thingbase/web --filter=@thingbase/shared",
+    "start": "turbo dev --filter=@thingbase/web --filter=@thingbase/shared",
     "dev": "turbo dev",
     "build": "turbo build",
     "lint": "turbo lint",

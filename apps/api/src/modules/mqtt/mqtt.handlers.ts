@@ -19,7 +19,7 @@ export class MqttHandlers implements OnModuleInit {
     private readonly commands: CommandsService,
     @Inject(forwardRef(() => AlertEvaluatorService))
     private readonly alertEvaluator: AlertEvaluatorService,
-  ) {}
+  ) { }
 
   onModuleInit() {
     // Register handlers for different message types
@@ -33,7 +33,7 @@ export class MqttHandlers implements OnModuleInit {
    */
   private async handleTelemetry(message: MqttMessage) {
     const { tenantId, deviceId, payload } = message;
-    
+
     if (!tenantId || !deviceId) {
       this.logger.warn('Invalid telemetry message: missing tenantId or deviceId');
       return;
@@ -41,7 +41,7 @@ export class MqttHandlers implements OnModuleInit {
 
     try {
       const data = JSON.parse(payload.toString());
-      
+
       // Store telemetry in database
       await this.prisma.telemetry.create({
         data: {
@@ -54,7 +54,7 @@ export class MqttHandlers implements OnModuleInit {
       // Update device last seen
       await this.prisma.device.update({
         where: { id: deviceId },
-        data: { 
+        data: {
           lastSeen: new Date(),
           status: 'online',
         },
@@ -63,7 +63,7 @@ export class MqttHandlers implements OnModuleInit {
       // Update device state in Redis
       const currentState = await this.redis.get(REDIS_KEYS.DEVICE_STATE(deviceId));
       const state = currentState ? JSON.parse(currentState) : {};
-      
+
       const newState = {
         ...state,
         ...data,
@@ -106,7 +106,7 @@ export class MqttHandlers implements OnModuleInit {
    */
   private async handleAck(message: MqttMessage) {
     const { tenantId, deviceId, payload } = message;
-    
+
     if (!tenantId || !deviceId) {
       this.logger.warn('Invalid ack message: missing tenantId or deviceId');
       return;
@@ -134,7 +134,7 @@ export class MqttHandlers implements OnModuleInit {
       if (ackData.state) {
         const currentState = await this.redis.get(REDIS_KEYS.DEVICE_STATE(deviceId));
         const state = currentState ? JSON.parse(currentState) : {};
-        
+
         const newState = {
           ...state,
           ...ackData.state,
@@ -173,7 +173,7 @@ export class MqttHandlers implements OnModuleInit {
    */
   private async handleStatus(message: MqttMessage) {
     const { tenantId, deviceId, payload } = message;
-    
+
     if (!tenantId || !deviceId) {
       this.logger.warn('Invalid status message: missing tenantId or deviceId');
       return;
@@ -195,7 +195,7 @@ export class MqttHandlers implements OnModuleInit {
       // Update Redis state
       const currentState = await this.redis.get(REDIS_KEYS.DEVICE_STATE(deviceId));
       const state = currentState ? JSON.parse(currentState) : {};
-      
+
       const newState = {
         ...state,
         online,

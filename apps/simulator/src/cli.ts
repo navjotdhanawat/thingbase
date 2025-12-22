@@ -29,6 +29,23 @@ const DEVICE_PRESETS: Record<DevicePreset, { name: string; description: string }
     name: 'Generic Sensor',
     description: 'Value, battery, signal strength',
   },
+  // New device presets
+  'temp-humidity': {
+    name: 'Temperature & Humidity Monitor',
+    description: 'Temperature, humidity, battery, RSSI (read-only)',
+  },
+  'relay-4ch': {
+    name: 'Smart Relay (4 Channel)',
+    description: 'Four relay switches with WiFi RSSI and uptime',
+  },
+  'led-strip': {
+    name: 'LED Strip Controller',
+    description: 'Power, brightness, RGB color, effects',
+  },
+  doorbell: {
+    name: 'Smart Doorbell',
+    description: 'Motion detection, door status, battery, actions',
+  },
 };
 
 const program = new Command();
@@ -51,7 +68,7 @@ program
   .action(async (options) => {
     const preset = options.type as DevicePreset;
     const presetInfo = DEVICE_PRESETS[preset];
-    
+
     if (!presetInfo) {
       console.error(chalk.red(`Unknown device type: ${preset}`));
       console.error(chalk.yellow('Available types: ' + Object.keys(DEVICE_PRESETS).join(', ')));
@@ -79,7 +96,7 @@ program
     };
 
     const simulator = new DeviceSimulator(config);
-    
+
     // Handle graceful shutdown
     process.on('SIGINT', async () => {
       console.log(chalk.yellow('\n⏹  Stopping simulator...'));
@@ -106,14 +123,14 @@ program
   .action(() => {
     console.log(chalk.blue.bold('📋 Available Device Type Presets'));
     console.log(chalk.gray('─'.repeat(50)));
-    
+
     for (const [key, info] of Object.entries(DEVICE_PRESETS)) {
       console.log(chalk.white.bold(`  ${key}`));
       console.log(chalk.cyan(`    ${info.name}`));
       console.log(chalk.gray(`    ${info.description}`));
       console.log('');
     }
-    
+
     console.log(chalk.gray('─'.repeat(50)));
     console.log(chalk.gray('Usage: iot-simulator run -t <tenant> -d <device> --type <preset>'));
   });
@@ -129,7 +146,7 @@ program
   .option('-i, --interval <ms>', 'Telemetry interval in milliseconds', '5000')
   .action(async (options) => {
     const preset = options.type as DevicePreset;
-    
+
     console.log(chalk.blue.bold('🔌 IoT Device Simulator (Batch Mode)'));
     console.log(chalk.gray('─'.repeat(40)));
     console.log(chalk.white(`Tenant:     ${options.tenant}`));

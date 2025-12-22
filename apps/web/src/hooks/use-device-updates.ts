@@ -100,9 +100,21 @@ export function useDeviceRealtime(deviceId: string) {
       }));
     };
 
+    // Handle command acknowledgements (may contain state updates)
+    const handleCommandAck = (event: CommandAckEvent) => {
+      if (event.deviceId !== deviceId || !mounted || !event.state) return;
+
+      setState(prev => ({
+        ...prev,
+        data: { ...prev.data, ...event.state },
+        lastUpdate: event.timestamp,
+      }));
+    };
+
     const unsubTelemetry = onDeviceTelemetry(handleTelemetry);
     const unsubState = onDeviceState(handleState);
     const unsubStatus = onDeviceStatus(handleStatus);
+    const unsubCommandAck = onCommandAck(handleCommandAck);
 
     return () => {
       mounted = false;
@@ -110,6 +122,7 @@ export function useDeviceRealtime(deviceId: string) {
       unsubTelemetry();
       unsubState();
       unsubStatus();
+      unsubCommandAck();
       socket.off('connect', updateConnectionStatus);
       socket.off('disconnect', updateConnectionStatus);
     };
@@ -127,14 +140,19 @@ export function useDeviceUpdates(deviceId?: string) {
 
   const handleDeviceUpdate = useCallback(
     (update: DeviceTelemetryEvent | DeviceStatusEvent) => {
-      // Invalidate device queries to refetch data
-      if (deviceId && update.deviceId === deviceId) {
-        queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
-        queryClient.invalidateQueries({ queryKey: ['device', deviceId, 'state'] });
+      // Only invalidate queries for status changes (online/offline)
+      // Telemetry and state updates are handled in real-time by useDeviceRealtime
+      // without needing to refetch from REST API
+      if ('online' in update) {
+        // This is a DeviceStatusEvent - refetch device info for status change
+        if (deviceId && update.deviceId === deviceId) {
+          queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
+        }
+        // Invalidate the devices list for status changes
+        queryClient.invalidateQueries({ queryKey: ['devices'] });
       }
-
-      // Always invalidate the devices list
-      queryClient.invalidateQueries({ queryKey: ['devices'] });
+      // Note: We do NOT invalidate on telemetry events since useDeviceRealtime
+      // already handles those via WebSocket without needing REST API calls
     },
     [queryClient, deviceId]
   );
