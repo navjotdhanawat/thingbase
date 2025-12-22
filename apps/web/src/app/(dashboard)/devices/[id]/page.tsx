@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -15,6 +15,8 @@ import {
   Settings,
   RotateCcw,
   Cpu,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
@@ -28,7 +30,7 @@ import { DeviceStatusPill } from '@/components/app/device-status-pill';
 import { DeviceLastSeen } from '@/components/app/device-last-seen';
 import { CommandStatusPill } from '@/components/app/command-status-pill';
 import { TelemetryChart } from '@/components/app/telemetry-chart';
-import { useDeviceUpdates } from '@/hooks/use-device-updates';
+import { useDeviceUpdates, useDeviceRealtime, useSocketConnection } from '@/hooks/use-device-updates';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -71,7 +73,13 @@ export default function DeviceDetailPage({
   const queryClient = useQueryClient();
   const [activeQuickCommand, setActiveQuickCommand] = useState<string | null>(null);
 
-  // Enable real-time updates
+  // Real-time WebSocket connection status
+  const isSocketConnected = useSocketConnection();
+
+  // Real-time device state (live telemetry)
+  const realtimeState = useDeviceRealtime(deviceId);
+
+  // Also enable query invalidation for commands
   useDeviceUpdates(deviceId);
 
   const { data: device, isLoading: deviceLoading } = useQuery<Device>({
@@ -79,11 +87,20 @@ export default function DeviceDetailPage({
     queryFn: () => api.getDevice(deviceId),
   });
 
-  const { data: deviceState, isLoading: stateLoading } = useQuery({
+  const { data: apiDeviceState, isLoading: stateLoading } = useQuery({
     queryKey: ['device', deviceId, 'state'],
     queryFn: () => api.getDeviceState(deviceId),
-    refetchInterval: 5000,
+    // No more polling - we have real-time updates!
+    staleTime: Infinity,
   });
+
+  // Merge API state with real-time state
+  const deviceState = useMemo(() => {
+    return {
+      ...(apiDeviceState || {}),
+      ...(realtimeState.data || {}),
+    };
+  }, [apiDeviceState, realtimeState.data]);
 
   const { data: commands, isLoading: commandsLoading } = useQuery<Command[]>({
     queryKey: ['commands', deviceId],
@@ -197,11 +214,41 @@ export default function DeviceDetailPage({
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-semibold">{device.name}</h1>
               <DeviceStatusPill status={device.status} />
+              {/* Real-time connection indicator */}
+              <div
+                className={cn(
+                  "flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium",
+                  isSocketConnected
+                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                    : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                )}
+                title={isSocketConnected ? "Live updates active" : "Connecting to real-time updates..."}
+              >
+                {isSocketConnected ? (
+                  <>
+                    <Wifi className="h-3 w-3" />
+                    <span>Live</span>
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="h-3 w-3" />
+                    <span>Connecting</span>
+                  </>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>ID: {device.externalId || device.id.slice(0, 8)}</span>
               <span>•</span>
               <DeviceLastSeen lastSeen={device.lastSeen} />
+              {realtimeState.lastUpdate && (
+                <>
+                  <span>•</span>
+                  <span className="text-green-600 dark:text-green-400">
+                    Last update: {new Date(realtimeState.lastUpdate).toLocaleTimeString()}
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -331,9 +378,20 @@ export default function DeviceDetailPage({
               {/* Current State */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Current State</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Current State</CardTitle>
+                    {isSocketConnected && (
+                      <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                        Live
+                      </div>
+                    )}
+                  </div>
                   <CardDescription>
-                    Live device state (shadow)
+                    {isSocketConnected ? 'Real-time device telemetry' : 'Device state (shadow)'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>

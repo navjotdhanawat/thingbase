@@ -1,17 +1,28 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { getSocket, connectSocket } from '@/lib/socket';
+import {
+  getSocket,
+  connectSocket,
+  subscribeToDevice,
+  unsubscribeFromDevice,
+  onDeviceTelemetry,
+  onDeviceState,
+  onDeviceStatus,
+  onCommandAck,
+  DeviceTelemetryEvent,
+  DeviceStateEvent,
+  DeviceStatusEvent,
+  CommandAckEvent,
+} from '@/lib/socket';
 import { useAuthStore } from '@/stores/auth-store';
 
-interface DeviceUpdate {
-  type: string;
-  deviceId: string;
-  data?: Record<string, unknown>;
-  state?: Record<string, unknown>;
-  online?: boolean;
-  timestamp: string;
+interface DeviceRealtimeState {
+  data: Record<string, unknown>;
+  online: boolean;
+  lastUpdate: string | null;
+  isConnected: boolean;
 }
 
 interface CommandUpdate {
@@ -22,18 +33,106 @@ interface CommandUpdate {
   timestamp: string;
 }
 
+/**
+ * Hook for real-time device updates
+ * Provides live telemetry data and connection status
+ */
+export function useDeviceRealtime(deviceId: string) {
+  const { isAuthenticated } = useAuthStore();
+  const [state, setState] = useState<DeviceRealtimeState>({
+    data: {},
+    online: false,
+    lastUpdate: null,
+    isConnected: false,
+  });
+
+  useEffect(() => {
+    if (!isAuthenticated || !deviceId) return;
+
+    let mounted = true;
+    const socket = getSocket() || connectSocket();
+
+    // Track connection status
+    const updateConnectionStatus = () => {
+      if (mounted) {
+        setState(prev => ({ ...prev, isConnected: socket.connected }));
+      }
+    };
+
+    socket.on('connect', updateConnectionStatus);
+    socket.on('disconnect', updateConnectionStatus);
+    updateConnectionStatus();
+
+    // Subscribe to this device's updates
+    subscribeToDevice(deviceId);
+
+    // Handle telemetry updates
+    const handleTelemetry = (event: DeviceTelemetryEvent) => {
+      if (event.deviceId !== deviceId || !mounted) return;
+
+      setState(prev => ({
+        ...prev,
+        data: { ...prev.data, ...event.data },
+        lastUpdate: event.timestamp,
+        online: true,
+      }));
+    };
+
+    // Handle state updates
+    const handleState = (event: DeviceStateEvent) => {
+      if (event.deviceId !== deviceId || !mounted) return;
+
+      setState(prev => ({
+        ...prev,
+        data: event.state,
+        lastUpdate: new Date().toISOString(),
+      }));
+    };
+
+    // Handle status updates
+    const handleStatus = (event: DeviceStatusEvent) => {
+      if (event.deviceId !== deviceId || !mounted) return;
+
+      setState(prev => ({
+        ...prev,
+        online: event.online,
+        lastUpdate: event.timestamp,
+      }));
+    };
+
+    const unsubTelemetry = onDeviceTelemetry(handleTelemetry);
+    const unsubState = onDeviceState(handleState);
+    const unsubStatus = onDeviceStatus(handleStatus);
+
+    return () => {
+      mounted = false;
+      unsubscribeFromDevice(deviceId);
+      unsubTelemetry();
+      unsubState();
+      unsubStatus();
+      socket.off('connect', updateConnectionStatus);
+      socket.off('disconnect', updateConnectionStatus);
+    };
+  }, [isAuthenticated, deviceId]);
+
+  return state;
+}
+
+/**
+ * Hook for general device list updates (invalidates queries on changes)
+ */
 export function useDeviceUpdates(deviceId?: string) {
   const queryClient = useQueryClient();
   const { isAuthenticated } = useAuthStore();
 
   const handleDeviceUpdate = useCallback(
-    (update: DeviceUpdate) => {
+    (update: DeviceTelemetryEvent | DeviceStatusEvent) => {
       // Invalidate device queries to refetch data
       if (deviceId && update.deviceId === deviceId) {
         queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
         queryClient.invalidateQueries({ queryKey: ['device', deviceId, 'state'] });
       }
-      
+
       // Always invalidate the devices list
       queryClient.invalidateQueries({ queryKey: ['devices'] });
     },
@@ -41,10 +140,12 @@ export function useDeviceUpdates(deviceId?: string) {
   );
 
   const handleCommandUpdate = useCallback(
-    (update: CommandUpdate) => {
+    (update: CommandUpdate | CommandAckEvent) => {
       // Invalidate command queries
       queryClient.invalidateQueries({ queryKey: ['commands'] });
-      queryClient.invalidateQueries({ queryKey: ['command', update.commandId] });
+      if ('commandId' in update) {
+        queryClient.invalidateQueries({ queryKey: ['command', update.commandId] });
+      }
     },
     [queryClient]
   );
@@ -56,7 +157,7 @@ export function useDeviceUpdates(deviceId?: string) {
 
     // Subscribe to device-specific updates
     if (deviceId) {
-      socket.emit('subscribe:device', deviceId);
+      subscribeToDevice(deviceId);
     }
 
     // Listen for various event types
@@ -69,9 +170,9 @@ export function useDeviceUpdates(deviceId?: string) {
 
     return () => {
       if (deviceId) {
-        socket.emit('unsubscribe:device', deviceId);
+        unsubscribeFromDevice(deviceId);
       }
-      
+
       socket.off('device:telemetry', handleDeviceUpdate);
       socket.off('device:status', handleDeviceUpdate);
       socket.off('device:state', handleDeviceUpdate);
@@ -82,4 +183,33 @@ export function useDeviceUpdates(deviceId?: string) {
   }, [isAuthenticated, deviceId, handleDeviceUpdate, handleCommandUpdate]);
 }
 
+/**
+ * Hook for tracking WebSocket connection status
+ */
+export function useSocketConnection() {
+  const [isConnected, setIsConnected] = useState(false);
+  const { isAuthenticated } = useAuthStore();
 
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setIsConnected(false);
+      return;
+    }
+
+    const socket = getSocket() || connectSocket();
+
+    const onConnect = () => setIsConnected(true);
+    const onDisconnect = () => setIsConnected(false);
+
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+    setIsConnected(socket.connected);
+
+    return () => {
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
+    };
+  }, [isAuthenticated]);
+
+  return isConnected;
+}

@@ -3,8 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../providers/devices_provider.dart';
+import '../../../../core/network/socket_service.dart';
 
-class DeviceDetailScreen extends ConsumerWidget {
+class DeviceDetailScreen extends ConsumerStatefulWidget {
   final String deviceId;
 
   const DeviceDetailScreen({
@@ -13,10 +14,52 @@ class DeviceDetailScreen extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DeviceDetailScreen> createState() => _DeviceDetailScreenState();
+}
+
+class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
+  Map<String, dynamic> _realtimeState = {};
+  bool _isConnected = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initSocket();
+  }
+
+  Future<void> _initSocket() async {
+    final socketService = ref.read(socketServiceProvider);
+    await socketService.connect();
+    socketService.subscribeToDevice(widget.deviceId);
+
+    // Listen to connection status
+    socketService.connectionStream.listen((connected) {
+      if (mounted) {
+        setState(() => _isConnected = connected);
+      }
+    });
+
+    // Listen to telemetry updates
+    socketService.telemetryStream.listen((event) {
+      if (event.deviceId == widget.deviceId && mounted) {
+        setState(() {
+          _realtimeState = {..._realtimeState, ...event.data};
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    ref.read(socketServiceProvider).unsubscribeFromDevice(widget.deviceId);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final deviceAsync = ref.watch(deviceProvider(deviceId));
-    final stateAsync = ref.watch(deviceStateProvider(deviceId));
+    final deviceAsync = ref.watch(deviceProvider(widget.deviceId));
+    final stateAsync = ref.watch(deviceStateProvider(widget.deviceId));
 
     return Scaffold(
       appBar: AppBar(
@@ -26,6 +69,25 @@ class DeviceDetailScreen extends ConsumerWidget {
           data: (device) => Text(device?['name'] ?? 'Device'),
         ),
         actions: [
+          // Real-time connection indicator
+          if (_isConnected)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Icon(
+                Icons.wifi,
+                color: Colors.green,
+                size: 20,
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Icon(
+                Icons.wifi_off,
+                color: Colors.grey,
+                size: 20,
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.more_vert),
             onPressed: () {
@@ -45,7 +107,7 @@ class DeviceDetailScreen extends ConsumerWidget {
               const Text('Failed to load device'),
               const SizedBox(height: 8),
               OutlinedButton(
-                onPressed: () => ref.invalidate(deviceProvider(deviceId)),
+                onPressed: () => ref.invalidate(deviceProvider(widget.deviceId)),
                 child: const Text('Retry'),
               ),
             ],
@@ -58,8 +120,8 @@ class DeviceDetailScreen extends ConsumerWidget {
 
           return RefreshIndicator(
             onRefresh: () async {
-              ref.invalidate(deviceProvider(deviceId));
-              ref.invalidate(deviceStateProvider(deviceId));
+              ref.invalidate(deviceProvider(widget.deviceId));
+              ref.invalidate(deviceStateProvider(widget.deviceId));
             },
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -91,10 +153,15 @@ class DeviceDetailScreen extends ConsumerWidget {
                     ),
                     error: (_, __) => _buildNoDataCard(context),
                     data: (state) {
-                      if (state == null || state.isEmpty) {
+                      // Merge API state with real-time state
+                      final mergedState = {
+                        ...(state ?? {}),
+                        ..._realtimeState,
+                      };
+                      if (mergedState.isEmpty) {
                         return _buildNoDataCard(context);
                       }
-                      return _buildStateGrid(context, state)
+                      return _buildStateGrid(context, mergedState)
                           .animate()
                           .fadeIn(delay: 200.ms);
                     },
