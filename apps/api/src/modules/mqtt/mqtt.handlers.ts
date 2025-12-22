@@ -4,8 +4,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import { CommandsService } from '../commands/commands.service';
 import { AlertEvaluatorService } from '../alerts/alert-evaluator.service';
-import { REDIS_KEYS } from '@repo/shared';
-import { mqttAckPayloadSchema } from '@repo/shared';
+import { REDIS_KEYS } from '@thingbase/shared';
+import { mqttAckPayloadSchema } from '@thingbase/shared';
 
 @Injectable()
 export class MqttHandlers implements OnModuleInit {

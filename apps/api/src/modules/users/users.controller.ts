@@ -17,7 +17,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
 import { AdminOnly } from '../../common/decorators/roles.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
-import { createUserSchema, updateUserSchema, inviteUserSchema } from '@repo/shared';
+import { createUserSchema, updateUserSchema, inviteUserSchema } from '@thingbase/shared';
 
 @ApiTags('Users')
 @ApiBearerAuth('access-token')

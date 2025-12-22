@@ -10,7 +10,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import { MqttService } from '../mqtt/mqtt.service';
 import { v4 as uuidv4 } from 'uuid';
-import { REDIS_KEYS, COMMAND_STATUS, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@repo/shared';
+import { REDIS_KEYS, COMMAND_STATUS, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@thingbase/shared';
 
 interface CreateCommandDto {
   deviceId: string;

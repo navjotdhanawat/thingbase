@@ -14,7 +14,7 @@ import { RedisService } from '../../redis/redis.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { REDIS_KEYS, JwtPayload } from '@repo/shared';
+import { REDIS_KEYS, JwtPayload } from '@thingbase/shared';
 import { CommandsService } from '../commands/commands.service';
 
 interface AuthenticatedSocket extends Socket {

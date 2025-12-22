@@ -20,7 +20,7 @@ import {
   updateDeviceTypeSchema,
   CreateDeviceTypeInput,
   UpdateDeviceTypeInput,
-} from '@repo/shared';
+} from '@thingbase/shared';
 
 @ApiTags('Device Types')
 @ApiBearerAuth('access-token')

@@ -6,7 +6,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
 import { AdminOnly } from '../../common/decorators/roles.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
-import { updateTenantSchema } from '@repo/shared';
+import { updateTenantSchema } from '@thingbase/shared';
 
 @ApiTags('Tenant')
 @ApiBearerAuth('access-token')

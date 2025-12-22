@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
-import type { User, CreateUser, UpdateUser, InviteUser, PaginationParams } from '@repo/shared';
-import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@repo/shared';
+import type { User, CreateUser, UpdateUser, InviteUser, PaginationParams } from '@thingbase/shared';
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@thingbase/shared';
 
 @Injectable()
 export class UsersService {

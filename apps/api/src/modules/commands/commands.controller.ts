@@ -15,7 +15,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
-import { createCommandSchema } from '@repo/shared';
+import { createCommandSchema } from '@thingbase/shared';
 
 @ApiTags('Commands')
 @ApiBearerAuth('access-token')

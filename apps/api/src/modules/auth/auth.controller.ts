@@ -9,7 +9,7 @@ import {
   resetPasswordSchema,
   changePasswordSchema,
   updateProfileSchema,
-} from '@repo/shared';
+} from '@thingbase/shared';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';

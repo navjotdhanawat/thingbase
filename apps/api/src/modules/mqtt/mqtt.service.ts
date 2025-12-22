@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as mqtt from 'mqtt';
-import { MQTT_TOPICS } from '@repo/shared';
+import { MQTT_TOPICS } from '@thingbase/shared';
 
 export interface MqttMessage {
   topic: string;

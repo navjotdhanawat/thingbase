@@ -5,8 +5,8 @@ import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import { EmailService } from '../email/email.service';
-import { REDIS_KEYS } from '@repo/shared';
-import type { Register, Login, AuthTokens, JwtPayload, ForgotPassword, ResetPassword, ChangePassword, UpdateProfile } from '@repo/shared';
+import { REDIS_KEYS } from '@thingbase/shared';
+import type { Register, Login, AuthTokens, JwtPayload, ForgotPassword, ResetPassword, ChangePassword, UpdateProfile } from '@thingbase/shared';
 import { randomUUID, createHash, randomBytes } from 'crypto';
 
 @Injectable()

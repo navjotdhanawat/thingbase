@@ -18,7 +18,7 @@ import { CurrentTenant } from '../../common/decorators/current-tenant.decorator'
 import { AdminOnly } from '../../common/decorators/roles.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { Public } from '../../common/decorators/public.decorator';
-import { createDeviceSchema, updateDeviceSchema } from '@repo/shared';
+import { createDeviceSchema, updateDeviceSchema } from '@thingbase/shared';
 
 @ApiTags('Devices')
 @ApiBearerAuth('access-token')

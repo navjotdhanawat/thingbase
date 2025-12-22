@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service';
-import { DeviceTypeSchema, DeviceField } from '@repo/shared';
+import { DeviceTypeSchema, DeviceField } from '@thingbase/shared';
 
 interface TelemetryQueryParams {
   startTime?: string;
@@ -39,7 +39,7 @@ export interface AggregatedDataPoint {
 export class TelemetryService {
   private readonly logger = new Logger(TelemetryService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   /**
    * Get telemetry data for a device with time range
@@ -153,7 +153,7 @@ export class TelemetryService {
     }
 
     // Get schema fields if device has a type (to know which fields to look for)
-    const schemaFields = device.type?.schema 
+    const schemaFields = device.type?.schema
       ? (device.type.schema as unknown as DeviceTypeSchema).fields
       : null;
 
@@ -165,8 +165,8 @@ export class TelemetryService {
       const data = (rawData.data as Record<string, unknown>) || rawData;
 
       // If we have a schema, use those fields; otherwise, auto-detect
-      const fieldsToCheck = schemaFields 
-        ? schemaFields.filter(f => f.type === 'number').map(f => f.key)
+      const fieldsToCheck = schemaFields
+        ? schemaFields.filter((f: DeviceField) => f.type === 'number').map((f: DeviceField) => f.key)
         : Object.keys(data);
 
       for (const key of fieldsToCheck) {
@@ -239,7 +239,7 @@ export class TelemetryService {
     });
 
     // Get schema fields if device has a type
-    const schemaFields = device.type?.schema 
+    const schemaFields = device.type?.schema
       ? (device.type.schema as unknown as DeviceTypeSchema).fields
       : null;
 
@@ -248,11 +248,11 @@ export class TelemetryService {
 
     for (const t of telemetry) {
       const bucketTime = Math.floor(t.timestamp.getTime() / intervalMs) * intervalMs;
-      
+
       if (!buckets.has(bucketTime)) {
         buckets.set(bucketTime, { count: 0, fieldValues: {} });
       }
-      
+
       const bucket = buckets.get(bucketTime)!;
       bucket.count++;
 
@@ -260,8 +260,8 @@ export class TelemetryService {
       const data = (rawData.data as Record<string, unknown>) || rawData;
 
       // If we have a schema, use those fields; otherwise, auto-detect
-      const fieldsToCheck = schemaFields 
-        ? schemaFields.filter(f => f.type === 'number').map(f => f.key)
+      const fieldsToCheck = schemaFields
+        ? schemaFields.filter((f: DeviceField) => f.type === 'number').map((f: DeviceField) => f.key)
         : Object.keys(data);
 
       for (const key of fieldsToCheck) {
@@ -338,7 +338,7 @@ export class TelemetryService {
 
     // Discover field types from data
     const fieldTypes: Record<string, Set<string>> = {};
-    
+
     for (const t of recentTelemetry) {
       const rawData = t.data as Record<string, unknown>;
       const data = (rawData.data as Record<string, unknown>) || rawData;
@@ -356,7 +356,7 @@ export class TelemetryService {
     for (const [key, types] of Object.entries(fieldTypes)) {
       const typeArray = Array.from(types);
       let fieldType: 'number' | 'boolean' | 'string' = 'string';
-      
+
       if (typeArray.includes('number') && typeArray.length === 1) {
         fieldType = 'number';
       } else if (typeArray.includes('boolean') && typeArray.length === 1) {
@@ -421,7 +421,7 @@ export class TelemetryService {
     } else if (type === 'boolean') {
       return { icon: 'toggle-left', chartType: 'boolean' };
     }
-    
+
     return { icon: 'type' };
   }
 

@@ -5,7 +5,7 @@ import {
   UpdateDeviceTypeInput, 
   DEVICE_TYPE_PRESETS,
   DeviceTypeSchema,
-} from '@repo/shared';
+} from '@thingbase/shared';
 import { Prisma } from '@prisma/client';
 
 @Injectable()

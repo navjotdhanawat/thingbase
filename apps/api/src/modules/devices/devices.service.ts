@@ -9,8 +9,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes, createHash } from 'crypto';
-import type { Device, CreateDevice, UpdateDevice } from '@repo/shared';
-import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, REDIS_KEYS } from '@repo/shared';
+import type { Device, CreateDevice, UpdateDevice } from '@thingbase/shared';
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, REDIS_KEYS } from '@thingbase/shared';
 
 interface DeviceFilterParams {
   page?: number;

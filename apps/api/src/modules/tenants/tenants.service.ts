@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import type { CreateTenant, UpdateTenant, Tenant } from '@repo/shared';
+import type { CreateTenant, UpdateTenant, Tenant } from '@thingbase/shared';
 
 @Injectable()
 export class TenantsService {
