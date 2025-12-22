@@ -1,0 +1,328 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.0.3 Chrome/140.0.7339.249 Electron/38.7.0 Safari/537.36" version="29.0.3">
+  <diagram id="iot-saas-architecture" name="IoT SaaS Platform Architecture">
+    <mxGraphModel dx="2262" dy="1529" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" background="#0000CC" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="&lt;b&gt;IoT SaaS Platform - Architecture &amp; Data Flow&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontColor=#1a1a2e;" parent="1" vertex="1">
+          <mxGeometry x="500" y="20" width="600" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="clients-layer" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1f5fe;strokeColor=#01579b;dashed=1;dashPattern=5 5;" parent="1" vertex="1">
+          <mxGeometry x="40" y="80" width="1520" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="clients-label" value="&lt;b&gt;CLIENTS&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=14;fontColor=#01579b;" parent="1" vertex="1">
+          <mxGeometry x="50" y="85" width="100" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="web-client" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0288d1;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="80" y="120" width="200" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="web-icon" value="" style="shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;imageAspect=0;aspect=fixed;image=https://cdn-icons-png.flaticon.com/512/5968/5968322.png;" parent="1" vertex="1">
+          <mxGeometry x="75" y="110" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="web-title" value="&lt;b&gt;Web Dashboard&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#333333;" parent="1" vertex="1">
+          <mxGeometry x="135" y="130" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="web-tech" value="Next.js 16 + React 19&#xa;Tailwind CSS + shadcn/ui&#xa;TanStack Query&#xa;Socket.IO Client&#xa;Zustand" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=10;fontColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="90" y="155" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="mobile-client" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0288d1;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="320" y="120" width="200" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="mobile-icon" value="" style="shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;imageAspect=0;aspect=fixed;image=https://cdn-icons-png.flaticon.com/512/2586/2586488.png;" parent="1" vertex="1">
+          <mxGeometry x="310" y="105" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="mobile-title" value="&lt;b&gt;Mobile App&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#333333;" parent="1" vertex="1">
+          <mxGeometry x="375" y="130" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="mobile-tech" value="Flutter 3.10+&#xa;Riverpod State Mgmt&#xa;Dio HTTP Client&#xa;Socket.IO Client&#xa;BLE + QR Provisioning" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=10;fontColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="330" y="155" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="iot-devices" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#43a047;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="560" y="120" width="200" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="iot-icon" value="" style="shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;imageAspect=0;aspect=fixed;image=https://cdn-icons-png.flaticon.com/512/2917/2917995.png;" parent="1" vertex="1">
+          <mxGeometry x="550" y="105" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="iot-title" value="&lt;b&gt;IoT Devices&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#333333;" parent="1" vertex="1">
+          <mxGeometry x="615" y="130" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="iot-tech" value="ESP32 / Arduino / RPi&#xa;MQTT Client&#xa;Sensors &amp; Actuators&#xa;WiFi / BLE&#xa;JSON Telemetry" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=10;fontColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="570" y="155" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="simulator" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7b1fa2;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="800" y="120" width="200" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="sim-icon" value="" style="shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;imageAspect=0;aspect=fixed;image=https://cdn-icons-png.flaticon.com/512/1239/1239525.png;" parent="1" vertex="1">
+          <mxGeometry x="790" y="105" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="sim-title" value="&lt;b&gt;Device Simulator&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#333333;" parent="1" vertex="1">
+          <mxGeometry x="855" y="130" width="130" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="sim-tech" value="Node.js CLI&#xa;MQTT.js Client&#xa;Multiple Device Types&#xa;Configurable Intervals&#xa;Command Response" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=10;fontColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="810" y="155" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="admin-note" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#ff9800;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="1040" y="120" width="200" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="admin-title" value="&lt;b&gt;User Roles&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=12;fontColor=#333333;" parent="1" vertex="1">
+          <mxGeometry x="1040" y="130" width="200" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="admin-roles" value="👑 Admin - Full access&#xa;🔧 Operator - Commands + View&#xa;👁 Viewer - Read only&#xa;&#xa;Multi-tenant isolation" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=10;fontColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="1055" y="155" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="proto-legend" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#9e9e9e;" parent="1" vertex="1">
+          <mxGeometry x="1280" y="120" width="260" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="proto-title" value="&lt;b&gt;Protocols&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=12;fontColor=#333333;" parent="1" vertex="1">
+          <mxGeometry x="1280" y="130" width="260" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="proto-list" value="🔵 HTTP/REST - API requests&#xa;🟢 WebSocket - Real-time updates&#xa;🟠 MQTT - IoT telemetry/commands&#xa;🔴 Redis Pub/Sub - Internal events&#xa;🟣 PostgreSQL - Data persistence" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=10;fontColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="1295" y="155" width="230" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="api-layer" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#f57c00;dashed=1;dashPattern=5 5;" parent="1" vertex="1">
+          <mxGeometry x="40" y="300" width="1520" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="api-label" value="&lt;b&gt;API GATEWAY &amp; SERVICES&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=14;fontColor=#f57c00;" parent="1" vertex="1">
+          <mxGeometry x="50" y="305" width="200" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="nestjs-api" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#e65100;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="80" y="340" width="680" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="nestjs-title" value="&lt;b&gt;NestJS API Server&lt;/b&gt; (Port 3001)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=14;fontColor=#e65100;" parent="1" vertex="1">
+          <mxGeometry x="90" y="345" width="250" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="auth-module" value="🔐 Auth&#xa;JWT + RBAC" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e3f2fd;strokeColor=#1565c0;fontSize=10;fontColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="100" y="380" width="90" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="devices-module" value="📱 Devices&#xa;CRUD + State" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f5e9;strokeColor=#2e7d32;fontSize=10;fontColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="200" y="380" width="90" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="commands-module" value="⚡ Commands&#xa;Send + Track" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fce4ec;strokeColor=#c2185b;fontSize=10;fontColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="300" y="380" width="90" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="alerts-module" value="🔔 Alerts&#xa;Rules + Trigger" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#ef6c00;fontSize=10;fontColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="400" y="380" width="90" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="tenants-module" value="🏢 Tenants&#xa;Multi-tenant" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#7b1fa2;fontSize=10;fontColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="500" y="380" width="90" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="users-module" value="👥 Users&#xa;CRUD + Invite" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e0f7fa;strokeColor=#00838f;fontSize=10;fontColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="600" y="380" width="90" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="mqtt-handler" value="📡 MQTT Handler&#xa;Telemetry, ACK, Status" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffebee;strokeColor=#c62828;fontSize=10;fontColor=light-dark(#000000,#000000);" parent="1" vertex="1">
+          <mxGeometry x="100" y="450" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ws-gateway" value="🔌 WebSocket Gateway&#xa;Socket.IO + Rooms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8eaf6;strokeColor=#3f51b5;fontSize=10;fontColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="270" y="450" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="rate-limiter" value="🛡 Rate Limiter&#xa;Throttler + Guards" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eceff1;strokeColor=#546e7a;fontSize=10;fontColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="440" y="450" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="audit-logger" value="📝 Audit Logger&#xa;Track All Actions" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#424242;fontSize=10;fontColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="610" y="450" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="mqtt-broker" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#c62828;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="800" y="340" width="200" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="mqtt-title" value="&lt;b&gt;Mosquitto MQTT&lt;/b&gt;&#xa;(Port 1883)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=12;fontColor=#c62828;" parent="1" vertex="1">
+          <mxGeometry x="800" y="350" width="200" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="mqtt-topics" value="Topics:&#xa;• {tenant}/devices/{id}/telemetry&#xa;• {tenant}/devices/{id}/commands&#xa;• {tenant}/devices/{id}/ack&#xa;• {tenant}/devices/{id}/status&#xa;&#xa;Features:&#xa;• LWT (Last Will)&#xa;• QoS 0/1/2&#xa;• Retained Messages" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=9;fontColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="810" y="380" width="180" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="event-flow" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6a1b9a;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="1040" y="340" width="500" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="event-title" value="&lt;b&gt;Real-Time Event Flow&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=12;fontColor=#6a1b9a;" parent="1" vertex="1">
+          <mxGeometry x="1040" y="350" width="500" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="flow-device" value="IoT Device" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#2e7d32;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="1060" y="390" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="flow-arrow1" value="" style="endArrow=classic;html=1;strokeColor=#ff9800;strokeWidth=2;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1130" y="405" as="sourcePoint" />
+            <mxPoint x="1170" y="405" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow-label1" value="MQTT" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=8;fontColor=#ff9800;" parent="1" vertex="1">
+          <mxGeometry x="1130" y="410" width="40" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="flow-broker" value="MQTT&#xa;Broker" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffcdd2;strokeColor=#c62828;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="1170" y="390" width="50" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="flow-arrow2" value="" style="endArrow=classic;html=1;strokeColor=#ff9800;strokeWidth=2;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1220" y="405" as="sourcePoint" />
+            <mxPoint x="1260" y="405" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow-api" value="API&#xa;Handler" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe0b2;strokeColor=#ef6c00;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="1260" y="390" width="50" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="flow-arrow3" value="" style="endArrow=classic;html=1;strokeColor=#e91e63;strokeWidth=2;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1310" y="405" as="sourcePoint" />
+            <mxPoint x="1350" y="405" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow-label3" value="Pub/Sub" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=8;fontColor=#e91e63;" parent="1" vertex="1">
+          <mxGeometry x="1310" y="410" width="40" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="flow-redis" value="Redis&#xa;Channel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#7b1fa2;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="1350" y="390" width="50" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="flow-arrow4" value="" style="endArrow=classic;html=1;strokeColor=#4caf50;strokeWidth=2;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1400" y="405" as="sourcePoint" />
+            <mxPoint x="1440" y="405" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow-label4" value="Socket.IO" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=8;fontColor=#4caf50;" parent="1" vertex="1">
+          <mxGeometry x="1400" y="410" width="45" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="flow-ws" value="WS&#xa;Gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8eaf6;strokeColor=#3f51b5;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="1440" y="390" width="50" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="flow-arrow5" value="" style="endArrow=classic;html=1;strokeColor=#4caf50;strokeWidth=2;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1490" y="405" as="sourcePoint" />
+            <mxPoint x="1510" y="405" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow-client" value="Client" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bbdefb;strokeColor=#1565c0;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="1500" y="390" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="cmd-flow-title" value="&lt;b&gt;Command Flow (Reverse):&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;fontColor=#333333;" parent="1" vertex="1">
+          <mxGeometry x="1060" y="430" width="150" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="cmd-flow" value="Client → API → MQTT → Device → ACK → API → Redis → WS → Client" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=9;fontColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="1060" y="445" width="400" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="storage-note" value="&lt;b&gt;Data Storage:&lt;/b&gt;&#xa;• Telemetry → PostgreSQL (historical)&#xa;• State → Redis (cache, 24h TTL)&#xa;• Commands → PostgreSQL (audit trail)" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=9;fontColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="1060" y="460" width="250" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="db-layer" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f5e9;strokeColor=#2e7d32;dashed=1;dashPattern=5 5;" parent="1" vertex="1">
+          <mxGeometry x="40" y="580" width="1520" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="db-label" value="&lt;b&gt;DATA LAYER&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=14;fontColor=#2e7d32;" parent="1" vertex="1">
+          <mxGeometry x="50" y="585" width="150" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="postgres" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#1565c0;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="80" y="620" width="340" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="pg-icon" value="" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#1565c0;strokeColor=#1565c0;" parent="1" vertex="1">
+          <mxGeometry x="90" y="635" width="30" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="pg-title" value="&lt;b&gt;PostgreSQL 16&lt;/b&gt; (Port 5433)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#1565c0;" parent="1" vertex="1">
+          <mxGeometry x="130" y="630" width="200" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pg-tables" value="Tables: tenants, users, devices, device_types,&#xa;telemetry, commands, alerts, alert_rules, audit_logs&#xa;&#xa;Prisma ORM | UUID PKs | Soft Deletes" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=9;fontColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="130" y="655" width="280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="redis" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#c62828;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="460" y="620" width="340" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="redis-icon" value="" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#c62828;strokeColor=#c62828;" parent="1" vertex="1">
+          <mxGeometry x="470" y="635" width="30" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="redis-title" value="&lt;b&gt;Redis 7&lt;/b&gt; (Port 6379)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#c62828;" parent="1" vertex="1">
+          <mxGeometry x="510" y="630" width="200" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="redis-usage" value="Uses:&#xa;• Device state cache (device:{id}:state)&#xa;• Pub/Sub channels (channel:devices:{tenant})&#xa;• Command correlation (cmd:{correlationId})&#xa;• Rate limiting | Session tokens" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=9;fontColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="510" y="655" width="280" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="tenant-isolation" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7b1fa2;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="840" y="620" width="300" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="tenant-title" value="&lt;b&gt;Multi-Tenant Data Isolation&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=12;fontColor=#7b1fa2;" parent="1" vertex="1">
+          <mxGeometry x="840" y="630" width="300" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="tenant-desc" value="• Every table has tenant_id column&#xa;• Prisma middleware enforces tenant scope&#xa;• MQTT topics include tenant prefix&#xa;• Socket.IO rooms per tenant&#xa;• No cross-tenant data leakage" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=9;fontColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="855" y="655" width="280" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="file-storage" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#9e9e9e;strokeWidth=2;strokeDasharray=3 3;" parent="1" vertex="1">
+          <mxGeometry x="1180" y="620" width="180" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="file-title" value="&lt;b&gt;Object Storage&lt;/b&gt; (Future)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=11;fontColor=#9e9e9e;" parent="1" vertex="1">
+          <mxGeometry x="1180" y="630" width="180" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="file-desc" value="• S3 / MinIO&#xa;• Firmware OTA files&#xa;• Device certificates&#xa;• Tenant logos" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=9;fontColor=#9e9e9e;" parent="1" vertex="1">
+          <mxGeometry x="1195" y="655" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-web-api" value="" style="endArrow=classic;startArrow=classic;html=1;strokeColor=#0288d1;strokeWidth=2;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="180" y="240" as="sourcePoint" />
+            <mxPoint x="180" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow-web-api-label" value="HTTP + WebSocket" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontColor=#0288d1;rotation=-90;" parent="1" vertex="1">
+          <mxGeometry x="115" y="270" width="100" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-mobile-api" value="" style="endArrow=classic;startArrow=classic;html=1;strokeColor=#0288d1;strokeWidth=2;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="420" y="240" as="sourcePoint" />
+            <mxPoint x="420" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow-mobile-api-label" value="HTTP + WebSocket" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontColor=#0288d1;rotation=-90;" parent="1" vertex="1">
+          <mxGeometry x="355" y="270" width="100" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-iot-mqtt" value="" style="endArrow=classic;startArrow=classic;html=1;strokeColor=#ff9800;strokeWidth=2;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="660" y="240" as="sourcePoint" />
+            <mxPoint x="900" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow-iot-mqtt-label" value="MQTT" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontColor=#ff9800;" parent="1" vertex="1">
+          <mxGeometry x="750" y="280" width="50" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-sim-mqtt" value="" style="endArrow=classic;startArrow=classic;html=1;strokeColor=#ff9800;strokeWidth=2;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="900" y="240" as="sourcePoint" />
+            <mxPoint x="900" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow-mqtt-api" value="" style="endArrow=classic;startArrow=classic;html=1;strokeColor=#e91e63;strokeWidth=2;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="800" y="430" as="sourcePoint" />
+            <mxPoint x="760" y="430" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow-mqtt-api-label" value="Subscribe" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontColor=#e91e63;" parent="1" vertex="1">
+          <mxGeometry x="750" y="410" width="55" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-api-pg" value="" style="endArrow=classic;startArrow=classic;html=1;strokeColor=#1565c0;strokeWidth=2;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="250" y="520" as="sourcePoint" />
+            <mxPoint x="250" y="620" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow-api-pg-label" value="Prisma" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontColor=#1565c0;rotation=-90;" parent="1" vertex="1">
+          <mxGeometry x="220" y="560" width="40" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-api-redis" value="" style="endArrow=classic;startArrow=classic;html=1;strokeColor=#c62828;strokeWidth=2;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="630" y="520" as="sourcePoint" />
+            <mxPoint x="630" y="620" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow-api-redis-label" value="ioredis" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontColor=#c62828;rotation=-90;" parent="1" vertex="1">
+          <mxGeometry x="600" y="560" width="40" height="15" as="geometry" />
+        </mxCell>
+        <mxCell id="footer" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#e0e0e0;" parent="1" vertex="1">
+          <mxGeometry x="40" y="760" width="1520" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="footer-title" value="&lt;b&gt;DEPLOYMENT OPTIONS&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=12;fontColor=#424242;" parent="1" vertex="1">
+          <mxGeometry x="50" y="765" width="200" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="footer-content" value="&lt;b&gt;Development:&lt;/b&gt; Docker Compose (PostgreSQL + Redis + Mosquitto) | &lt;b&gt;Production:&lt;/b&gt; Kubernetes / Docker Swarm | AWS RDS + ElastiCache + Amazon MQ | &lt;b&gt;CI/CD:&lt;/b&gt; GitHub Actions" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=10;fontColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="50" y="790" width="1500" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="footer-versions" value="&lt;b&gt;Versions:&lt;/b&gt; Node.js 20+ | pnpm 9+ | NestJS 11 | Next.js 16 | Flutter 3.10+ | PostgreSQL 16 | Redis 7 | Mosquitto 2" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=10;fontColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="50" y="815" width="1500" height="20" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
