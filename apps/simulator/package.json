@@ -1,0 +1,29 @@
+{
+  "name": "@repo/simulator",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "iot-simulator": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsup src/cli.ts --format esm --target node20",
+    "dev": "tsx src/cli.ts",
+    "start": "node dist/cli.js"
+  },
+  "dependencies": {
+    "@repo/shared": "workspace:*",
+    "commander": "^12.0.0",
+    "mqtt": "^5.14.0",
+    "chalk": "^5.3.0",
+    "ora": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsup": "^8.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}
+
+

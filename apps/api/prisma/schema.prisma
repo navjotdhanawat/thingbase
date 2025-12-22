@@ -1,0 +1,281 @@
+// Prisma Schema for IoT SaaS Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// TENANT & USER MODELS
+// ============================================================================
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  plan      String   @default("free")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  // White-label branding configuration
+  branding  Json     @default("{}")  // { primaryColor, secondaryColor, logoUrl, fontFamily, etc. }
+
+  // Relations
+  users       User[]
+  deviceTypes DeviceType[]
+  devices     Device[]
+  commands    Command[]
+  auditLogs   AuditLog[]
+  alertRules  AlertRule[]
+  alerts      Alert[]
+
+  @@map("tenants")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  tenantId     String   @map("tenant_id")
+  email        String
+  passwordHash String   @map("password_hash")
+  name         String?
+  role         String   @default("user")
+  status       String   @default("active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant              Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deviceAssignments   DeviceAssignment[]
+  auditLogs           AuditLog[]
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+
+  @@unique([tenantId, email])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  tokenHash String   @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  revokedAt DateTime? @map("revoked_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
+
+// ============================================================================
+// DEVICE TYPE MODELS
+// ============================================================================
+
+model DeviceType {
+  id          String   @id @default(uuid())
+  tenantId    String   @map("tenant_id")
+  name        String   // e.g., "Smart Thermostat", "Water Pump", "Egg Incubator"
+  slug        String   // e.g., "thermostat", "water-pump"
+  description String?
+  icon        String   @default("cpu") // lucide icon name
+  color       String   @default("#6366f1") // hex color for UI
+  schema      Json     // Field definitions: { fields: [...] }
+  isSystem    Boolean  @default(false) @map("is_system") // System templates can't be deleted
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  devices Device[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@map("device_types")
+}
+
+// ============================================================================
+// DEVICE MODELS
+// ============================================================================
+
+model Device {
+  id         String    @id @default(uuid())
+  tenantId   String    @map("tenant_id")
+  typeId     String?   @map("type_id") // Optional: for schema-based display
+  name       String
+  externalId String?   @map("external_id")
+  status     String    @default("pending")
+  lastSeen   DateTime? @map("last_seen")
+  metadata   Json      @default("{}")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  type        DeviceType?        @relation(fields: [typeId], references: [id], onDelete: SetNull)
+  credentials DeviceCredential[]
+  assignments DeviceAssignment[]
+  commands    Command[]
+  telemetry   Telemetry[]
+  alertRules  AlertRule[]
+
+  @@unique([tenantId, externalId])
+  @@index([tenantId, typeId])
+  @@map("devices")
+}
+
+model DeviceCredential {
+  id        String    @id @default(uuid())
+  deviceId  String    @map("device_id")
+  tokenHash String    @map("token_hash")
+  type      String    @default("mqtt")
+  expiresAt DateTime? @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@map("device_credentials")
+}
+
+model DeviceAssignment {
+  deviceId  String   @map("device_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([deviceId, userId])
+  @@map("device_assignments")
+}
+
+// ============================================================================
+// COMMAND MODELS
+// ============================================================================
+
+model Command {
+  id            String    @id @default(uuid())
+  tenantId      String    @map("tenant_id")
+  deviceId      String    @map("device_id")
+  correlationId String    @unique @map("correlation_id")
+  type          String
+  payload       Json
+  status        String    @default("pending")
+  errorMessage  String?   @map("error_message")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  sentAt        DateTime? @map("sent_at")
+  completedAt   DateTime? @map("completed_at")
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  device Device @relation(fields: [deviceId], references: [id])
+
+  @@index([deviceId, createdAt(sort: Desc)])
+  @@index([status])
+  @@map("commands")
+}
+
+// ============================================================================
+// TELEMETRY MODELS
+// ============================================================================
+
+model Telemetry {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  deviceId  String   @map("device_id")
+  timestamp DateTime @default(now()) @map("ts")
+  data      Json
+
+  // Relations
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId, timestamp(sort: Desc)])
+  @@map("telemetry")
+}
+
+// ============================================================================
+// ALERTING MODELS
+// ============================================================================
+
+model AlertRule {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  deviceId  String?  @map("device_id")
+  name      String
+  type      String   // 'device_offline', 'threshold', 'no_data'
+  condition Json     // { "metric": "temperature", "operator": ">", "value": 30 }
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  device Device? @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  alerts Alert[]
+
+  @@index([tenantId, enabled])
+  @@map("alert_rules")
+}
+
+model Alert {
+  id          String    @id @default(uuid())
+  tenantId    String    @map("tenant_id")
+  ruleId      String    @map("rule_id")
+  deviceId    String    @map("device_id")
+  status      String    @default("active") // 'active', 'acknowledged', 'resolved'
+  triggeredAt DateTime  @default(now()) @map("triggered_at")
+  resolvedAt  DateTime? @map("resolved_at")
+  metadata    Json      @default("{}")
+
+  // Relations
+  tenant Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rule   AlertRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([ruleId])
+  @@map("alerts")
+}
+
+// ============================================================================
+// AUDIT LOG
+// ============================================================================
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  tenantId     String   @map("tenant_id")
+  userId       String?  @map("user_id")
+  action       String
+  resourceType String?  @map("resource_type")
+  resourceId   String?  @map("resource_id")
+  metadata     Json     @default("{}")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User?  @relation(fields: [userId], references: [id])
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@map("audit_logs")
+}
+

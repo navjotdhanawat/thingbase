@@ -1,0 +1,98 @@
+name: iot_companion
+description: "White-label IoT companion app for device management and real-time control"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # STATE MANAGEMENT & DEPENDENCY INJECTION
+  # ═══════════════════════════════════════════════════════════════════════════
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # NETWORKING & API
+  # ═══════════════════════════════════════════════════════════════════════════
+  dio: ^5.8.0
+  retrofit: ^4.9.1
+  json_annotation: ^4.9.0
+  socket_io_client: ^3.0.2
+  connectivity_plus: ^7.0.0
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # DEVICE PROVISIONING (IoT-specific)
+  # ═══════════════════════════════════════════════════════════════════════════
+  flutter_blue_plus: ^2.1.0
+  wifi_iot: ^0.3.19+1          # SoftAP provisioning - connect to device hotspot
+  network_info_plus: ^7.0.0    # Get current WiFi info
+  permission_handler: ^12.0.1
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # QR CODE & CAMERA
+  # ═══════════════════════════════════════════════════════════════════════════
+  mobile_scanner: ^7.1.4
+  qr_flutter: ^4.1.0
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # UI COMPONENTS
+  # ═══════════════════════════════════════════════════════════════════════════
+  flutter_animate: ^4.5.2
+  lucide_icons: ^0.257.0
+  google_fonts: ^6.2.1
+  cached_network_image: ^3.4.1
+  flutter_svg: ^2.0.17
+  shimmer: ^3.0.0
+  cupertino_icons: ^1.0.8
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # CHARTS & DATA VISUALIZATION
+  # ═══════════════════════════════════════════════════════════════════════════
+  fl_chart: ^1.1.1
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # STORAGE & SECURITY
+  # ═══════════════════════════════════════════════════════════════════════════
+  flutter_secure_storage: ^10.0.0
+  shared_preferences: ^2.5.3
+  hive_flutter: ^1.1.0
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # WHITE-LABEL & THEMING
+  # ═══════════════════════════════════════════════════════════════════════════
+  flex_color_scheme: ^8.1.1
+  dynamic_color: ^1.7.0
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # NAVIGATION & ROUTING
+  # ═══════════════════════════════════════════════════════════════════════════
+  go_router: ^17.0.1
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # UTILITIES
+  # ═══════════════════════════════════════════════════════════════════════════
+  freezed_annotation: ^3.1.0
+  intl: ^0.20.2
+  timeago: ^3.7.0
+  pull_to_refresh_flutter3: ^2.0.2
+  flutter_local_notifications: ^19.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Assets will be added as needed
+  # assets:
+  #   - assets/images/
+  #   - assets/icons/

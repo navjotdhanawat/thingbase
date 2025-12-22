@@ -1,0 +1,154 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# DEPENDENCIES
+# ═══════════════════════════════════════════════════════════════════════════════
+node_modules/
+.pnpm-store/
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# BUILD OUTPUTS
+# ═══════════════════════════════════════════════════════════════════════════════
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TURBOREPO
+# ═══════════════════════════════════════════════════════════════════════════════
+.turbo/
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ENVIRONMENT & SECRETS
+# ═══════════════════════════════════════════════════════════════════════════════
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+!.env.example
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PRISMA
+# ═══════════════════════════════════════════════════════════════════════════════
+apps/api/prisma/*.db
+apps/api/prisma/*.db-journal
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# LOGS
+# ═══════════════════════════════════════════════════════════════════════════════
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FLUTTER / DART
+# ═══════════════════════════════════════════════════════════════════════════════
+# Miscellaneous
+apps/mobile/*.class
+apps/mobile/*.lock
+apps/mobile/*.pyc
+apps/mobile/*.swp
+apps/mobile/.DS_Store
+apps/mobile/.atom/
+apps/mobile/.buildlog/
+apps/mobile/.history
+apps/mobile/.svn/
+
+# IntelliJ related
+apps/mobile/*.iml
+apps/mobile/*.ipr
+apps/mobile/*.iws
+apps/mobile/.idea/
+
+# Flutter/Dart/Pub related
+apps/mobile/**/doc/api/
+apps/mobile/.dart_tool/
+apps/mobile/.packages
+apps/mobile/build/
+apps/mobile/pubspec.lock
+
+# iOS/XCode related
+apps/mobile/ios/.generated/
+apps/mobile/ios/Flutter/App.framework
+apps/mobile/ios/Flutter/Flutter.framework
+apps/mobile/ios/Flutter/Flutter.podspec
+apps/mobile/ios/Flutter/Generated.xcconfig
+apps/mobile/ios/Flutter/flutter_export_environment.sh
+apps/mobile/ios/ServiceDefinitions.json
+apps/mobile/ios/Runner/GeneratedPluginRegistrant.*
+apps/mobile/ios/Pods/
+apps/mobile/ios/.symlinks/
+
+# Android related
+apps/mobile/android/.gradle/
+apps/mobile/android/app/build/
+apps/mobile/android/local.properties
+apps/mobile/android/**/GeneratedPluginRegistrant.java
+apps/mobile/**/*.keystore
+!apps/mobile/**/*.keystore.example
+
+# Generated files
+apps/mobile/**/*.g.dart
+apps/mobile/**/*.freezed.dart
+apps/mobile/**/*.gr.dart
+apps/mobile/**/*.mocks.dart
+
+# Coverage
+apps/mobile/coverage/
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TESTING
+# ═══════════════════════════════════════════════════════════════════════════════
+coverage/
+.nyc_output/
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# IDE & EDITORS
+# ═══════════════════════════════════════════════════════════════════════════════
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# OS FILES
+# ═══════════════════════════════════════════════════════════════════════════════
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.pem
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# DEBUG
+# ═══════════════════════════════════════════════════════════════════════════════
+.eslintcache
+*.pid
+*.seed
+*.pid.lock
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# MISC
+# ═══════════════════════════════════════════════════════════════════════════════
+*.tgz
+.yarn-integrity
+.vercel
+.cache/
+tmp/
+temp/
