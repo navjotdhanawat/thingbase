@@ -81,6 +81,13 @@ const TELEMETRY_GENERATORS: Record<DevicePreset, () => Record<string, unknown>> 
     value: randomInRange(0, 100, 2),
     battery: Math.floor(Math.random() * 20 + 80),
     rssi: Math.floor(Math.random() * 40 - 80),
+    temp: randomInRange(18, 30, 1),
+    humidity: randomInRange(40, 80, 1),
+    power: Math.random() > 0.5,
+    rotation: Math.floor(Math.random() * 360),
+    // boolean values
+    spray: randomChoice([true, false]),
+
   }),
 
   // New device presets

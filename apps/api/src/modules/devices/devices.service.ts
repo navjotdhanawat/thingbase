@@ -56,7 +56,7 @@ export class DevicesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
-  ) {}
+  ) { }
 
   /**
    * List devices in tenant with optional filters
@@ -125,10 +125,13 @@ export class DevicesService {
    * Create device
    */
   async create(tenantId: string, dto: CreateDevice): Promise<Device> {
-    // Check for duplicate external ID within tenant
-    if (dto.externalId) {
+    // Normalize externalId: treat empty strings as null
+    const externalId = dto.externalId && dto.externalId.trim() !== '' ? dto.externalId.trim() : null;
+
+    // Check for duplicate external ID within tenant if provided
+    if (externalId) {
       const existing = await this.prisma.device.findFirst({
-        where: { tenantId, externalId: dto.externalId },
+        where: { tenantId, externalId },
       });
 
       if (existing) {
@@ -153,7 +156,7 @@ export class DevicesService {
         tenantId,
         typeId: dto.typeId,
         name: dto.name,
-        externalId: dto.externalId,
+        externalId: externalId,
         metadata: (dto.metadata || {}) as any,
         status: 'pending',
       },
@@ -176,12 +179,18 @@ export class DevicesService {
     // Verify device exists in tenant
     await this.findById(tenantId, id);
 
+    // Normalize externalId if provided
+    let externalId = dto.externalId;
+    if (externalId !== undefined) {
+      externalId = externalId && externalId.trim() !== '' ? externalId.trim() : null;
+    }
+
     // Check for duplicate external ID if updating
-    if (dto.externalId) {
+    if (externalId) {
       const existing = await this.prisma.device.findFirst({
         where: {
           tenantId,
-          externalId: dto.externalId,
+          externalId: externalId,
           NOT: { id },
         },
       });
@@ -208,7 +217,7 @@ export class DevicesService {
       data: {
         name: dto.name,
         typeId: dto.typeId,
-        externalId: dto.externalId,
+        externalId: externalId,
         metadata: dto.metadata as any,
       },
       include: { type: true },
@@ -432,7 +441,7 @@ export class DevicesService {
     // Generate claim token (ct_ prefix for identification)
     const tokenBytes = randomBytes(24);
     const claimToken = `ct_${tokenBytes.toString('base64url')}`;
-    
+
     // Token expires in 15 minutes
     const expiresInSeconds = 15 * 60;
     const expiresAt = new Date(Date.now() + expiresInSeconds * 1000);

@@ -60,6 +60,9 @@ export class MqttHandlers implements OnModuleInit {
         },
       });
 
+      // Flatten telemetry data for easier access in UI widgets
+      const telemetryData = data.data && typeof data.data === 'object' ? data.data : {};
+
       // Update device state in Redis
       const currentState = await this.redis.get(REDIS_KEYS.DEVICE_STATE(deviceId));
       const state = currentState ? JSON.parse(currentState) : {};
@@ -67,6 +70,7 @@ export class MqttHandlers implements OnModuleInit {
       const newState = {
         ...state,
         ...data,
+        ...telemetryData,
         lastSeen: new Date().toISOString(),
         online: true,
       };
@@ -82,7 +86,7 @@ export class MqttHandlers implements OnModuleInit {
         JSON.stringify({
           type: 'device:telemetry',
           deviceId,
-          data,
+          data: { ...data, ...telemetryData }, // Send flattened data to frontend
           timestamp: new Date().toISOString(),
         }),
       );
