@@ -367,6 +367,7 @@ export class TelemetryService {
         key,
         label: this.formatLabel(key),
         type: fieldType,
+        mode: 'read', // Auto-discovered fields are read-only sensors
         ...this.getDefaultFieldConfig(key, fieldType),
       });
     }

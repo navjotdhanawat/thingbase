@@ -30,6 +30,7 @@ import { DeviceStatusPill } from '@/components/app/device-status-pill';
 import { DeviceLastSeen } from '@/components/app/device-last-seen';
 import { CommandStatusPill } from '@/components/app/command-status-pill';
 import { TelemetryChart } from '@/components/app/telemetry-chart';
+import { DeviceControlPanel } from '@/components/devices/device-control-panel';
 import { useDeviceUpdates, useDeviceRealtime, useSocketConnection } from '@/hooks/use-device-updates';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -78,7 +79,7 @@ export default function DeviceDetailPage({
 
   // Real-time device state (live telemetry)
   const realtimeState = useDeviceRealtime(deviceId);
-
+  // console.log('Realtime state:', realtimeState);
   // Also enable query invalidation for commands
   useDeviceUpdates(deviceId);
 
@@ -269,6 +270,14 @@ export default function DeviceDetailPage({
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
+          {/* Schema-driven Control Panel - only shows if device has type with schema */}
+          <DeviceControlPanel
+            deviceId={deviceId}
+            device={device as any}
+            deviceState={deviceState}
+            isSocketConnected={isSocketConnected}
+          />
+
           <div className="grid gap-6 lg:grid-cols-3">
             {/* Left column - Control panel */}
             <div className="lg:col-span-2 space-y-6">

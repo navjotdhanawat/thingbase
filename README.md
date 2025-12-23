@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="docs/architecture.png" alt="ThingBase Architecture" width="900"/>
-</p>
-
 <h1 align="center">🔌 ThingBase</h1>
 
 <p align="center">
@@ -25,7 +21,9 @@
   <img src="https://img.shields.io/badge/license-MIT-276ef1" alt="License"/>
 </p>
 
----
+<p align="center">
+  <img src="docs/architecture.png" alt="ThingBase Architecture" width="900"/>
+</p>
 
 ## ✨ Features
 

@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../providers/devices_provider.dart';
 import '../../../../core/network/socket_service.dart';
+import '../widgets/widget_factory.dart';
 
 class DeviceDetailScreen extends ConsumerStatefulWidget {
   final String deviceId;
@@ -23,6 +24,14 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
   bool _isConnected = false;
   StreamSubscription? _connectionSubscription;
   StreamSubscription? _telemetrySubscription;
+  StreamSubscription? _statusSubscription;
+  final Set<String> _pendingCommands = {};
+  SocketService? _socketService; // Store reference to avoid using ref after dispose
+  bool _isDisposed = false;
+  
+  // Real-time device status
+  bool? _realtimeOnline;
+  String? _realtimeLastSeen;
 
   @override
   void initState() {
@@ -31,22 +40,47 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
   }
 
   Future<void> _initSocket() async {
-    final socketService = ref.read(socketServiceProvider);
-    await socketService.connect();
-    socketService.subscribeToDevice(widget.deviceId);
+    if (_isDisposed) return;
+    
+    _socketService = ref.read(socketServiceProvider);
+    await _socketService?.connect();
+    _socketService?.subscribeToDevice(widget.deviceId);
 
     // Listen to connection status
-    _connectionSubscription = socketService.connectionStream.listen((connected) {
-      if (mounted) {
+    _connectionSubscription = _socketService?.connectionStream.listen((connected) {
+      if (mounted && !_isDisposed) {
         setState(() => _isConnected = connected);
       }
     });
 
     // Listen to telemetry updates
-    _telemetrySubscription = socketService.telemetryStream.listen((event) {
-      if (event.deviceId == widget.deviceId && mounted) {
+    _telemetrySubscription = _socketService?.telemetryStream.listen((event) {
+      if (event.deviceId == widget.deviceId && mounted && !_isDisposed) {
         setState(() {
           _realtimeState = {..._realtimeState, ...event.data};
+          
+          // Update lastSeen from event data or timestamp
+          final lastSeenFromData = event.data['lastSeen'];
+          _realtimeLastSeen = lastSeenFromData?.toString() ?? event.timestamp;
+          
+          // Update online status from event data or infer from telemetry receipt
+          final onlineFromData = event.data['online'];
+          _realtimeOnline = onlineFromData is bool ? onlineFromData : true;
+          
+          // Clear pending state for keys that have been updated
+          for (final key in event.data.keys) {
+            _pendingCommands.remove(key);
+          }
+        });
+      }
+    });
+
+    // Listen to status updates (online/offline)
+    _statusSubscription = _socketService?.statusStream.listen((event) {
+      if (event.deviceId == widget.deviceId && mounted && !_isDisposed) {
+        setState(() {
+          _realtimeOnline = event.online;
+          _realtimeLastSeen = event.timestamp;
         });
       }
     });
@@ -54,10 +88,53 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
 
   @override
   void dispose() {
+    _isDisposed = true;
     _connectionSubscription?.cancel();
     _telemetrySubscription?.cancel();
-    ref.read(socketServiceProvider).unsubscribeFromDevice(widget.deviceId);
+    _statusSubscription?.cancel();
+    _connectionSubscription = null;
+    _telemetrySubscription = null;
+    _statusSubscription = null;
+    // Use stored reference instead of ref.read
+    _socketService?.unsubscribeFromDevice(widget.deviceId);
     super.dispose();
+  }
+
+  Future<void> _handleControlChange(String key, dynamic value) async {
+    if (_isDisposed) return;
+    
+    setState(() {
+      _pendingCommands.add(key);
+      // Optimistic update
+      _realtimeState[key] = value;
+    });
+
+    final commandSender = ref.read(commandSenderProvider);
+    final result = await commandSender.sendCommand(
+      deviceId: widget.deviceId,
+      key: key,
+      value: value,
+    );
+
+    if (!result.success && mounted && !_isDisposed) {
+      // Revert optimistic update on failure
+      ref.invalidate(deviceStateProvider(widget.deviceId));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.error ?? 'Failed to send command'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
+
+    // Clear pending after timeout
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted && !_isDisposed) {
+        setState(() {
+          _pendingCommands.remove(key);
+        });
+      }
+    });
   }
 
   @override
@@ -123,6 +200,12 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
             return const Center(child: Text('Device not found'));
           }
 
+          // Parse schema fields
+          final schema = device['type']?['schema'] as Map<String, dynamic>?;
+          final allFields = DeviceWidgetFactory.parseFields(schema);
+          final sensorFields = DeviceWidgetFactory.getSensorFields(allFields);
+          final controlFields = DeviceWidgetFactory.getControlFields(allFields);
+
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(deviceProvider(widget.deviceId));
@@ -139,56 +222,110 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
                   
                   const SizedBox(height: 24),
 
-                  // Current state
-                  Text(
-                    'Current State',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ).animate().fadeIn(delay: 100.ms),
-                  
-                  const SizedBox(height: 12),
-                  
-                  stateAsync.when(
-                    loading: () => const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: CircularProgressIndicator(),
+                  // Sensor widgets (read-only)
+                  if (sensorFields.isNotEmpty) ...[
+                    Text(
+                      'Sensors',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
+                    ).animate().fadeIn(delay: 100.ms),
+                    
+                    const SizedBox(height: 12),
+                    
+                    stateAsync.when(
+                      loading: () => const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: CircularProgressIndicator(),
+                        ),
+                      ),
+                      error: (_, __) => _buildNoDataCard(context),
+                      data: (state) {
+                        final mergedState = {
+                          ...(state ?? {}),
+                          ..._realtimeState,
+                        };
+                        if (mergedState.isEmpty) {
+                          return _buildNoDataCard(context);
+                        }
+                        return _buildSensorGrid(context, sensorFields, mergedState)
+                            .animate()
+                            .fadeIn(delay: 200.ms);
+                      },
                     ),
-                    error: (_, __) => _buildNoDataCard(context),
-                    data: (state) {
-                      // Merge API state with real-time state
-                      final mergedState = {
-                        ...(state ?? {}),
-                        ..._realtimeState,
-                      };
-                      if (mergedState.isEmpty) {
-                        return _buildNoDataCard(context);
-                      }
-                      return _buildStateGrid(context, mergedState)
-                          .animate()
-                          .fadeIn(delay: 200.ms);
-                    },
-                  ),
+                    
+                    const SizedBox(height: 24),
+                  ],
 
-                  const SizedBox(height: 24),
-
-                  // Quick commands
-                  Text(
-                    'Quick Commands',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                  // Control widgets (write/readwrite)
+                  if (controlFields.isNotEmpty) ...[
+                    Text(
+                      'Controls',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ).animate().fadeIn(delay: 300.ms),
+                    
+                    const SizedBox(height: 12),
+                    
+                    stateAsync.when(
+                      loading: () => const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: CircularProgressIndicator(),
+                        ),
+                      ),
+                      error: (_, __) => _buildControlsList(context, controlFields, {}),
+                      data: (state) {
+                        final mergedState = {
+                          ...(state ?? {}),
+                          ..._realtimeState,
+                        };
+                        return _buildControlsList(context, controlFields, mergedState)
+                            .animate()
+                            .fadeIn(delay: 400.ms);
+                      },
                     ),
-                  ).animate().fadeIn(delay: 300.ms),
-                  
-                  const SizedBox(height: 12),
-                  
-                  _buildCommandsSection(context, device)
-                      .animate()
-                      .fadeIn(delay: 400.ms),
+                    
+                    const SizedBox(height: 24),
+                  ],
 
-                  const SizedBox(height: 24),
+                  // Fallback: Show raw state if no schema
+                  if (allFields.isEmpty) ...[
+                    Text(
+                      'Current State',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ).animate().fadeIn(delay: 100.ms),
+                    
+                    const SizedBox(height: 12),
+                    
+                    stateAsync.when(
+                      loading: () => const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: CircularProgressIndicator(),
+                        ),
+                      ),
+                      error: (_, __) => _buildNoDataCard(context),
+                      data: (state) {
+                        final mergedState = {
+                          ...(state ?? {}),
+                          ..._realtimeState,
+                        };
+                        if (mergedState.isEmpty) {
+                          return _buildNoDataCard(context);
+                        }
+                        return _buildRawStateGrid(context, mergedState)
+                            .animate()
+                            .fadeIn(delay: 200.ms);
+                      },
+                    ),
+                    
+                    const SizedBox(height: 24),
+                  ],
 
                   // Device info
                   Text(
@@ -214,8 +351,11 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
 
   Widget _buildStatusCard(BuildContext context, Map<String, dynamic> device) {
     final theme = Theme.of(context);
+    
+    // Use real-time status if available, otherwise fall back to API data
     final status = device['status'] ?? 'pending';
-    final isOnline = status == 'online';
+    final isOnline = _realtimeOnline ?? (status == 'online');
+    final lastSeen = _realtimeLastSeen ?? device['lastSeen'];
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -248,16 +388,53 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  isOnline ? 'Online' : status.toString().toUpperCase(),
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      isOnline ? 'Online' : status.toString().toUpperCase(),
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    // Real-time indicator
+                    if (_realtimeOnline != null) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'LIVE',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 9,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-                if (device['lastSeen'] != null)
+                if (lastSeen != null)
                   Text(
-                    'Last seen: ${_formatLastSeen(device['lastSeen'])}',
+                    'Last seen: ${_formatLastSeen(lastSeen)}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: Colors.white.withOpacity(0.8),
                     ),
@@ -270,38 +447,76 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
     );
   }
 
-  Widget _buildStateGrid(BuildContext context, Map<String, dynamic> state) {
+  Widget _buildSensorGrid(
+    BuildContext context, 
+    List<DeviceField> fields,
+    Map<String, dynamic> state,
+  ) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 1.0,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: fields.length,
+      itemBuilder: (context, index) {
+        final field = fields[index];
+        final value = state[field.key];
+        
+        return DeviceWidgetFactory.buildWidget(
+          field: field,
+          value: value,
+          isLoading: _pendingCommands.contains(field.key),
+          onControlChanged: null, // Sensors don't have controls
+        );
+      },
+    );
+  }
+
+  Widget _buildControlsList(
+    BuildContext context,
+    List<DeviceField> fields,
+    Map<String, dynamic> state,
+  ) {
+    return Column(
+      children: fields.map((field) {
+        final value = state[field.key];
+        
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: DeviceWidgetFactory.buildWidget(
+            field: field,
+            value: value,
+            isLoading: _pendingCommands.contains(field.key),
+            onControlChanged: _handleControlChange,
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildRawStateGrid(BuildContext context, Map<String, dynamic> state) {
     final theme = Theme.of(context);
     
-    // Flatten nested telemetry data if present
-    final Map<String, dynamic> flatState = {};
-    
+    // Flatten and filter state
+    final entries = <MapEntry<String, dynamic>>[];
     for (final entry in state.entries) {
-      // Skip metadata fields
-      if (entry.key == 'lastUpdate' || 
-          entry.key == 'timestamp' || 
-          entry.key == 'online' || 
-          entry.key == 'lastSeen') continue;
+      if (_shouldSkipKey(entry.key)) continue;
       
       if (entry.value is Map) {
-        // Flatten nested maps
         final nestedMap = entry.value as Map;
         for (final nestedEntry in nestedMap.entries) {
-          flatState[nestedEntry.key.toString()] = nestedEntry.value;
+          if (!_shouldSkipKey(nestedEntry.key.toString())) {
+            entries.add(MapEntry(nestedEntry.key.toString(), nestedEntry.value));
+          }
         }
-      } else {
-        flatState[entry.key] = entry.value;
+      } else if (entry.value != null && entry.value is! List) {
+        entries.add(entry);
       }
     }
-    
-    // Filter out non-displayable values
-    final entries = flatState.entries
-        .where((e) => e.value != null && 
-                      e.key != 'lastUpdate' && 
-                      e.key != 'timestamp' &&
-                      !(e.value is Map) &&
-                      !(e.value is List))
-        .toList();
 
     if (entries.isEmpty) {
       return _buildNoDataCard(context);
@@ -316,11 +531,9 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
-      itemCount: entries.length > 6 ? 6 : entries.length, // Limit to 6 items
+      itemCount: entries.length > 6 ? 6 : entries.length,
       itemBuilder: (context, index) {
         final entry = entries[index];
-        final formattedValue = _formatValue(entry.value);
-        final unit = _getUnit(entry.key);
         
         return Container(
           padding: const EdgeInsets.all(14),
@@ -333,32 +546,14 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      formattedValue,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                    if (unit.isNotEmpty) ...[
-                      const SizedBox(width: 4),
-                      Text(
-                        unit,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.primary.withOpacity(0.7),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ],
+              Text(
+                _formatValue(entry.value),
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.primary,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 6),
               Text(
@@ -406,36 +601,6 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
     );
   }
 
-  Widget _buildCommandsSection(BuildContext context, Map<String, dynamic> device) {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      children: [
-        _CommandButton(
-          icon: Icons.refresh,
-          label: 'Restart',
-          onPressed: () {
-            // TODO: Send restart command
-          },
-        ),
-        _CommandButton(
-          icon: Icons.sync,
-          label: 'Sync',
-          onPressed: () {
-            // TODO: Send sync command
-          },
-        ),
-        _CommandButton(
-          icon: Icons.settings,
-          label: 'Configure',
-          onPressed: () {
-            // TODO: Open config
-          },
-        ),
-      ],
-    );
-  }
-
   Widget _buildInfoSection(BuildContext context, Map<String, dynamic> device) {
     final theme = Theme.of(context);
 
@@ -457,6 +622,11 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
         ],
       ),
     );
+  }
+
+  bool _shouldSkipKey(String key) {
+    const skipKeys = ['lastUpdate', 'timestamp', 'online', 'lastSeen', 'ts'];
+    return skipKeys.contains(key);
   }
 
   String _formatLastSeen(String? dateStr) {
@@ -495,61 +665,18 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
 
   String _formatValue(dynamic value) {
     if (value == null) return '-';
+    if (value is bool) return value ? 'ON' : 'OFF';
     if (value is num) {
       if (value.abs() >= 1000) {
         return '${(value / 1000).toStringAsFixed(1)}k';
       }
       return value.toStringAsFixed(value.truncateToDouble() == value ? 0 : 1);
     }
-    if (value is bool) {
-      return value ? 'ON' : 'OFF';
-    }
     final str = value.toString();
-    // Truncate long strings
     if (str.length > 10) {
       return '${str.substring(0, 10)}...';
     }
     return str;
-  }
-
-  String _getUnit(String key) {
-    final lowerKey = key.toLowerCase();
-    if (lowerKey.contains('temp')) return '°C';
-    if (lowerKey.contains('humidity') || lowerKey.contains('moisture')) return '%';
-    if (lowerKey.contains('pressure')) return 'hPa';
-    if (lowerKey.contains('battery')) return '%';
-    if (lowerKey.contains('voltage')) return 'V';
-    if (lowerKey.contains('current')) return 'A';
-    if (lowerKey.contains('power') && !lowerKey.contains('on')) return 'W';
-    if (lowerKey.contains('energy')) return 'kWh';
-    if (lowerKey.contains('flow')) return 'L/m';
-    if (lowerKey.contains('rssi') || lowerKey.contains('signal')) return 'dBm';
-    if (lowerKey.contains('speed')) return 'km/h';
-    if (lowerKey.contains('distance')) return 'm';
-    if (lowerKey.contains('weight')) return 'kg';
-    if (lowerKey.contains('ph')) return 'pH';
-    return '';
-  }
-}
-
-class _CommandButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onPressed;
-
-  const _CommandButton({
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 18),
-      label: Text(label),
-    );
   }
 }
 
@@ -599,4 +726,3 @@ class _InfoRow extends StatelessWidget {
     );
   }
 }
-

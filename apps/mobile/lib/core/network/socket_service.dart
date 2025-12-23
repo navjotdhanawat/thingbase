@@ -190,8 +190,21 @@ class SocketService {
     // Handle command acknowledgements
     _socket?.on('command:ack', (data) {
       try {
-        final event = CommandAckEvent.fromJson(Map<String, dynamic>.from(data));
+        final mapData = Map<String, dynamic>.from(data);
+        final event = CommandAckEvent.fromJson(mapData);
         _commandAckController.add(event);
+        
+        // Also emit as telemetry if state is included
+        // This ensures real-time state updates from commands are reflected
+        if (event.state != null && event.deviceId.isNotEmpty) {
+          final telemetryEvent = DeviceTelemetryEvent(
+            deviceId: event.deviceId,
+            data: event.state!,
+            timestamp: DateTime.now().toIso8601String(),
+          );
+          _telemetryController.add(telemetryEvent);
+          debugPrint('🔌 Command ack with state -> emitted as telemetry: ${event.deviceId}');
+        }
       } catch (e) {
         debugPrint('🔌 Error parsing command ack: $e');
       }

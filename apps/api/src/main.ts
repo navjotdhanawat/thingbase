@@ -3,6 +3,9 @@ import { ValidationPipe, Logger, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
+import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -14,6 +17,15 @@ async function bootstrap() {
     type: VersioningType.URI,
     defaultVersion: '1',
   });
+
+  // Global middleware for correlation ID
+  app.use(new CorrelationIdMiddleware().use.bind(new CorrelationIdMiddleware()));
+
+  // Global response interceptor for standard API format
+  app.useGlobalInterceptors(new ResponseInterceptor());
+
+  // Global exception filter for standard error format
+  app.useGlobalFilters(new HttpExceptionFilter());
 
   // Swagger/OpenAPI documentation
   const config = new DocumentBuilder()
@@ -32,6 +44,16 @@ Authorization: Bearer <access_token>
 - 10 requests/second
 - 50 requests/10 seconds  
 - 100 requests/minute
+
+## Response Format
+All responses follow the standard format:
+\`\`\`json
+{
+  "success": true,
+  "data": { ... },
+  "meta": { "requestId": "...", "timestamp": "..." }
+}
+\`\`\`
 
 ## WebSocket
 Real-time updates available at \`/devices\` namespace with Socket.IO.
@@ -74,20 +96,20 @@ Real-time updates available at \`/devices\` namespace with Socket.IO.
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
       // Allow requests with no origin (like mobile apps or curl)
       if (!origin) return callback(null, true);
-      
+
       // In development, allow all localhost origins
       if (process.env.NODE_ENV !== 'production') {
         if (origin.startsWith('http://localhost:')) {
           return callback(null, true);
         }
       }
-      
+
       // In production, check against allowed origins
       const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000').split(',');
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
-      
+
       callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
@@ -115,4 +137,5 @@ Real-time updates available at \`/devices\` namespace with Socket.IO.
 }
 
 bootstrap();
+
 
