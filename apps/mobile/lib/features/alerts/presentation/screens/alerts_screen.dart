@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../../../core/theme/app_theme.dart';
+import '../../../../shared/widgets/widgets.dart';
 import '../../providers/alerts_provider.dart';
 
 class AlertsScreen extends ConsumerWidget {
@@ -9,18 +10,24 @@ class AlertsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
+    final colors = AppColors.of(context);
     final alertsAsync = ref.watch(alertsProvider);
 
     return Scaffold(
+      backgroundColor: colors.background,
       appBar: AppBar(
-        title: const Text('Alerts'),
+        backgroundColor: colors.background,
+        title: Text(
+          'Alerts',
+          style: TextStyle(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () {
-              // TODO: Filter alerts
-            },
+            icon: Icon(Icons.filter_list, color: colors.textPrimary),
+            onPressed: () {},
           ),
         ],
       ),
@@ -28,36 +35,26 @@ class AlertsScreen extends ConsumerWidget {
         onRefresh: () async {
           ref.invalidate(alertsProvider);
         },
+        color: AppColors.accentPrimary,
+        backgroundColor: colors.backgroundCard,
         child: alertsAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
-                const SizedBox(height: 16),
-                const Text('Failed to load alerts'),
-                const SizedBox(height: 8),
-                OutlinedButton(
-                  onPressed: () => ref.invalidate(alertsProvider),
-                  child: const Text('Retry'),
-                ),
-              ],
-            ),
-          ),
+          loading: () => _buildLoadingState(colors),
+          error: (error, _) => _buildErrorState(ref, colors),
           data: (alerts) {
             if (alerts.isEmpty) {
-              return _buildEmptyState(context);
+              return _buildEmptyState(colors);
             }
 
-            return ListView.builder(
+            return ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: alerts.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final alert = alerts[index];
-                return _AlertCard(alert: alert)
-                    .animate()
-                    .fadeIn(delay: Duration(milliseconds: index * 50));
+                return _AlertCard(
+                  alert: alert, 
+                  alertsNotifier: ref.read(alertsProvider.notifier),
+                );
               },
             );
           },
@@ -66,32 +63,57 @@ class AlertsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
-    final theme = Theme.of(context);
+  Widget _buildLoadingState(AppColors colors) {
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: 3,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        return Container(
+          height: 100,
+          decoration: BoxDecoration(
+            color: colors.backgroundCard,
+            borderRadius: BorderRadius.circular(16),
+          ),
+        );
+      },
+    );
+  }
 
+  Widget _buildEmptyState(AppColors colors) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.notifications_none,
-              size: 80,
-              color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.statusOnline.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.check_circle_outline,
+                size: 64,
+                color: AppColors.statusOnline,
+              ),
             ),
             const SizedBox(height: 24),
             Text(
-              'No Alerts',
-              style: theme.textTheme.titleLarge?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+              'All Clear!',
+              style: TextStyle(
+                color: colors.textPrimary,
+                fontSize: 24,
+                fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'All your devices are running smoothly',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+              style: TextStyle(
+                color: colors.textSecondary,
+                fontSize: 14,
               ),
               textAlign: TextAlign.center,
             ),
@@ -100,16 +122,43 @@ class AlertsScreen extends ConsumerWidget {
       ),
     );
   }
+
+  Widget _buildErrorState(WidgetRef ref, AppColors colors) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: AppColors.statusError),
+          const SizedBox(height: 16),
+          Text(
+            'Failed to Load Alerts',
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () => ref.invalidate(alertsProvider),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _AlertCard extends ConsumerWidget {
+class _AlertCard extends StatelessWidget {
   final Map<String, dynamic> alert;
+  final AlertsNotifier alertsNotifier;
 
-  const _AlertCard({required this.alert});
+  const _AlertCard({required this.alert, required this.alertsNotifier});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final status = alert['status'] ?? 'active';
     final isActive = status == 'active';
 
@@ -117,101 +166,119 @@ class _AlertCard extends ConsumerWidget {
     IconData statusIcon;
     switch (status) {
       case 'active':
-        statusColor = Colors.red;
-        statusIcon = Icons.warning_amber;
+        statusColor = AppColors.statusError;
+        statusIcon = Icons.warning_amber_rounded;
         break;
       case 'acknowledged':
-        statusColor = Colors.orange;
+        statusColor = AppColors.statusWarning;
         statusIcon = Icons.visibility;
         break;
       case 'resolved':
-        statusColor = Colors.green;
+        statusColor = AppColors.statusOnline;
         statusIcon = Icons.check_circle;
         break;
       default:
-        statusColor = Colors.grey;
-        statusIcon = Icons.info;
+        statusColor = colors.textMuted;
+        statusIcon = Icons.info_outline;
     }
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return SimpleGlassCard(
+      isActive: isActive,
+      glowColor: statusColor,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(statusIcon, color: statusColor, size: 24),
+              ),
+              const SizedBox(width: 14),
+              
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      alert['rule']?['name'] ?? 'Alert',
+                      style: TextStyle(
+                        color: colors.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _formatTime(alert['triggeredAt']),
+                      style: TextStyle(
+                        color: colors.textMuted,
+                        fontSize: 12,
+                      ),
+                    ),
+                    if (alert['device'] != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.device_hub, size: 12, color: colors.textMuted),
+                          const SizedBox(width: 4),
+                          Text(
+                            alert['device']['name'] ?? 'Unknown Device',
+                            style: TextStyle(
+                              color: colors.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              
+              StatusBadge(status: status),
+            ],
+          ),
+          
+          if (isActive) ...[
+            const SizedBox(height: 16),
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      alertsNotifier.acknowledgeAlert(alert['id']);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.statusWarning,
+                      side: BorderSide(color: AppColors.statusWarning),
+                    ),
+                    child: const Text('Acknowledge'),
                   ),
-                  child: Icon(statusIcon, color: statusColor, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        alert['rule']?['name'] ?? 'Alert',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _formatTime(alert['triggeredAt']),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+                  child: FilledButton(
+                    onPressed: () {
+                      alertsNotifier.resolveAlert(alert['id']);
+                    },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.statusOnline,
+                      foregroundColor: colors.background,
+                    ),
+                    child: const Text('Resolve'),
                   ),
-                ),
-                Chip(
-                  label: Text(status.toString().toUpperCase()),
-                  labelStyle: TextStyle(
-                    color: statusColor,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  backgroundColor: statusColor.withOpacity(0.1),
-                  side: BorderSide.none,
-                  padding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
                 ),
               ],
             ),
-            
-            if (isActive) ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        ref.read(alertsProvider.notifier).acknowledgeAlert(alert['id']);
-                      },
-                      child: const Text('Acknowledge'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: () {
-                        ref.read(alertsProvider.notifier).resolveAlert(alert['id']);
-                      },
-                      child: const Text('Resolve'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
           ],
-        ),
+        ],
       ),
     );
   }
@@ -229,4 +296,3 @@ class _AlertCard extends ConsumerWidget {
     }
   }
 }
-

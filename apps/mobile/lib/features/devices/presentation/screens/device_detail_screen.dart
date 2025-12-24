@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../../../core/theme/app_theme.dart';
+import '../../../../shared/widgets/widgets.dart';
 import '../../providers/devices_provider.dart';
 import '../../../../core/network/socket_service.dart';
 import '../widgets/widget_factory.dart';
@@ -26,10 +27,9 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
   StreamSubscription? _telemetrySubscription;
   StreamSubscription? _statusSubscription;
   final Set<String> _pendingCommands = {};
-  SocketService? _socketService; // Store reference to avoid using ref after dispose
+  SocketService? _socketService;
   bool _isDisposed = false;
   
-  // Real-time device status
   bool? _realtimeOnline;
   String? _realtimeLastSeen;
 
@@ -46,28 +46,20 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
     await _socketService?.connect();
     _socketService?.subscribeToDevice(widget.deviceId);
 
-    // Listen to connection status
     _connectionSubscription = _socketService?.connectionStream.listen((connected) {
       if (mounted && !_isDisposed) {
         setState(() => _isConnected = connected);
       }
     });
 
-    // Listen to telemetry updates
     _telemetrySubscription = _socketService?.telemetryStream.listen((event) {
       if (event.deviceId == widget.deviceId && mounted && !_isDisposed) {
         setState(() {
           _realtimeState = {..._realtimeState, ...event.data};
-          
-          // Update lastSeen from event data or timestamp
           final lastSeenFromData = event.data['lastSeen'];
           _realtimeLastSeen = lastSeenFromData?.toString() ?? event.timestamp;
-          
-          // Update online status from event data or infer from telemetry receipt
           final onlineFromData = event.data['online'];
           _realtimeOnline = onlineFromData is bool ? onlineFromData : true;
-          
-          // Clear pending state for keys that have been updated
           for (final key in event.data.keys) {
             _pendingCommands.remove(key);
           }
@@ -75,7 +67,6 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
       }
     });
 
-    // Listen to status updates (online/offline)
     _statusSubscription = _socketService?.statusStream.listen((event) {
       if (event.deviceId == widget.deviceId && mounted && !_isDisposed) {
         setState(() {
@@ -92,10 +83,6 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
     _connectionSubscription?.cancel();
     _telemetrySubscription?.cancel();
     _statusSubscription?.cancel();
-    _connectionSubscription = null;
-    _telemetrySubscription = null;
-    _statusSubscription = null;
-    // Use stored reference instead of ref.read
     _socketService?.unsubscribeFromDevice(widget.deviceId);
     super.dispose();
   }
@@ -105,7 +92,6 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
     
     setState(() {
       _pendingCommands.add(key);
-      // Optimistic update
       _realtimeState[key] = value;
     });
 
@@ -117,90 +103,64 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
     );
 
     if (!result.success && mounted && !_isDisposed) {
-      // Revert optimistic update on failure
       ref.invalidate(deviceStateProvider(widget.deviceId));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result.error ?? 'Failed to send command'),
-          backgroundColor: Theme.of(context).colorScheme.error,
+          backgroundColor: AppColors.statusError,
         ),
       );
     }
 
-    // Clear pending after timeout
     Future.delayed(const Duration(seconds: 5), () {
       if (mounted && !_isDisposed) {
-        setState(() {
-          _pendingCommands.remove(key);
-        });
+        setState(() => _pendingCommands.remove(key));
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final colors = AppColors.of(context);
     final deviceAsync = ref.watch(deviceProvider(widget.deviceId));
     final stateAsync = ref.watch(deviceStateProvider(widget.deviceId));
 
     return Scaffold(
+      backgroundColor: colors.background,
       appBar: AppBar(
+        backgroundColor: colors.background,
         title: deviceAsync.when(
-          loading: () => const Text('Loading...'),
-          error: (_, __) => const Text('Device'),
-          data: (device) => Text(device?['name'] ?? 'Device'),
+          loading: () => Text('Loading...', style: TextStyle(color: colors.textPrimary)),
+          error: (_, __) => Text('Device', style: TextStyle(color: colors.textPrimary)),
+          data: (device) => Text(
+            device?['name'] ?? 'Device',
+            style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600),
+          ),
         ),
         actions: [
-          // Real-time connection indicator
           if (_isConnected)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: Icon(
-                Icons.wifi,
-                color: Colors.green,
-                size: 20,
-              ),
-            )
+            const LiveIndicator()
           else
             Padding(
               padding: const EdgeInsets.only(right: 8),
-              child: Icon(
-                Icons.wifi_off,
-                color: Colors.grey,
-                size: 20,
-              ),
+              child: Icon(Icons.wifi_off, color: colors.textMuted, size: 20),
             ),
           IconButton(
-            icon: const Icon(Icons.more_vert),
-            onPressed: () {
-              // TODO: Device options menu
-            },
+            icon: Icon(Icons.more_vert, color: colors.textPrimary),
+            onPressed: () => _showOptionsMenu(context, colors),
           ),
         ],
       ),
       body: deviceAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
-              const SizedBox(height: 16),
-              const Text('Failed to load device'),
-              const SizedBox(height: 8),
-              OutlinedButton(
-                onPressed: () => ref.invalidate(deviceProvider(widget.deviceId)),
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
-        ),
+        error: (error, _) => _buildErrorState(colors),
         data: (device) {
           if (device == null) {
-            return const Center(child: Text('Device not found'));
+            return Center(
+              child: Text('Device not found', style: TextStyle(color: colors.textSecondary)),
+            );
           }
 
-          // Parse schema fields
           final schema = device['type']?['schema'] as Map<String, dynamic>?;
           final allFields = DeviceWidgetFactory.parseFields(schema);
           final sensorFields = DeviceWidgetFactory.getSensorFields(allFields);
@@ -211,135 +171,67 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
               ref.invalidate(deviceProvider(widget.deviceId));
               ref.invalidate(deviceStateProvider(widget.deviceId));
             },
+            color: AppColors.accentPrimary,
+            backgroundColor: colors.backgroundCard,
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Status card
-                  _buildStatusCard(context, device).animate().fadeIn(),
+                  _buildStatusCard(device, colors),
                   
                   const SizedBox(height: 24),
 
-                  // Sensor widgets (read-only)
                   if (sensorFields.isNotEmpty) ...[
-                    Text(
-                      'Sensors',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ).animate().fadeIn(delay: 100.ms),
-                    
+                    _buildSectionHeader('Sensors', colors),
                     const SizedBox(height: 12),
-                    
                     stateAsync.when(
-                      loading: () => const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(24),
-                          child: CircularProgressIndicator(),
-                        ),
-                      ),
-                      error: (_, __) => _buildNoDataCard(context),
+                      loading: () => _buildLoadingGrid(sensorFields.length, colors),
+                      error: (_, __) => _buildNoDataCard(colors),
                       data: (state) {
-                        final mergedState = {
-                          ...(state ?? {}),
-                          ..._realtimeState,
-                        };
-                        if (mergedState.isEmpty) {
-                          return _buildNoDataCard(context);
-                        }
-                        return _buildSensorGrid(context, sensorFields, mergedState)
-                            .animate()
-                            .fadeIn(delay: 200.ms);
+                        final mergedState = {...(state ?? {}), ..._realtimeState};
+                        if (mergedState.isEmpty) return _buildNoDataCard(colors);
+                        return _buildSensorGrid(sensorFields, mergedState);
                       },
                     ),
-                    
                     const SizedBox(height: 24),
                   ],
 
-                  // Control widgets (write/readwrite)
                   if (controlFields.isNotEmpty) ...[
-                    Text(
-                      'Controls',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ).animate().fadeIn(delay: 300.ms),
-                    
+                    _buildSectionHeader('Controls', colors),
                     const SizedBox(height: 12),
-                    
                     stateAsync.when(
-                      loading: () => const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(24),
-                          child: CircularProgressIndicator(),
-                        ),
-                      ),
-                      error: (_, __) => _buildControlsList(context, controlFields, {}),
+                      loading: () => _buildLoadingControls(controlFields.length, colors),
+                      error: (_, __) => _buildControlsList(controlFields, {}),
                       data: (state) {
-                        final mergedState = {
-                          ...(state ?? {}),
-                          ..._realtimeState,
-                        };
-                        return _buildControlsList(context, controlFields, mergedState)
-                            .animate()
-                            .fadeIn(delay: 400.ms);
+                        final mergedState = {...(state ?? {}), ..._realtimeState};
+                        return _buildControlsList(controlFields, mergedState);
                       },
                     ),
-                    
                     const SizedBox(height: 24),
                   ],
 
-                  // Fallback: Show raw state if no schema
                   if (allFields.isEmpty) ...[
-                    Text(
-                      'Current State',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ).animate().fadeIn(delay: 100.ms),
-                    
+                    _buildSectionHeader('Current State', colors),
                     const SizedBox(height: 12),
-                    
                     stateAsync.when(
-                      loading: () => const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(24),
-                          child: CircularProgressIndicator(),
-                        ),
-                      ),
-                      error: (_, __) => _buildNoDataCard(context),
+                      loading: () => _buildLoadingGrid(4, colors),
+                      error: (_, __) => _buildNoDataCard(colors),
                       data: (state) {
-                        final mergedState = {
-                          ...(state ?? {}),
-                          ..._realtimeState,
-                        };
-                        if (mergedState.isEmpty) {
-                          return _buildNoDataCard(context);
-                        }
-                        return _buildRawStateGrid(context, mergedState)
-                            .animate()
-                            .fadeIn(delay: 200.ms);
+                        final mergedState = {...(state ?? {}), ..._realtimeState};
+                        if (mergedState.isEmpty) return _buildNoDataCard(colors);
+                        return _buildRawStateGrid(mergedState, colors);
                       },
                     ),
-                    
                     const SizedBox(height: 24),
                   ],
 
-                  // Device info
-                  Text(
-                    'Device Information',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ).animate().fadeIn(delay: 500.ms),
-                  
+                  _buildSectionHeader('Device Information', colors),
                   const SizedBox(height: 12),
+                  _buildInfoSection(device, colors),
                   
-                  _buildInfoSection(context, device)
-                      .animate()
-                      .fadeIn(delay: 600.ms),
+                  const SizedBox(height: 32),
                 ],
               ),
             ),
@@ -349,10 +241,18 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
     );
   }
 
-  Widget _buildStatusCard(BuildContext context, Map<String, dynamic> device) {
-    final theme = Theme.of(context);
-    
-    // Use real-time status if available, otherwise fall back to API data
+  Widget _buildSectionHeader(String title, AppColors colors) {
+    return Text(
+      title,
+      style: TextStyle(
+        color: colors.textPrimary,
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+
+  Widget _buildStatusCard(Map<String, dynamic> device, AppColors colors) {
     final status = device['status'] ?? 'pending';
     final isOnline = _realtimeOnline ?? (status == 'online');
     final lastSeen = _realtimeLastSeen ?? device['lastSeen'];
@@ -362,24 +262,34 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isOnline
-              ? [Colors.green.shade400, Colors.green.shade600]
-              : [Colors.grey.shade400, Colors.grey.shade600],
+              ? [AppColors.accentPrimary.withOpacity(0.3), AppColors.accentDark.withOpacity(0.2)]
+              : [colors.surfaceDim, colors.backgroundCard],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isOnline 
+              ? AppColors.accentPrimary.withOpacity(0.4)
+              : colors.glassBorder,
+        ),
+        boxShadow: isOnline
+            ? [BoxShadow(color: AppColors.glowPrimary, blurRadius: 20, spreadRadius: -5)]
+            : null,
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: isOnline 
+                  ? AppColors.accentPrimary.withOpacity(0.2)
+                  : colors.glassBackground,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(
               isOnline ? Icons.wifi : Icons.wifi_off,
-              color: Colors.white,
+              color: isOnline ? AppColors.accentPrimary : colors.textMuted,
               size: 32,
             ),
           ),
@@ -392,51 +302,24 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
                   children: [
                     Text(
                       isOnline ? 'Online' : status.toString().toUpperCase(),
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: colors.textPrimary,
+                        fontSize: 22,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    // Real-time indicator
                     if (_realtimeOnline != null) ...[
                       const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'LIVE',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 9,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      const LiveIndicator(),
                     ],
                   ],
                 ),
                 if (lastSeen != null)
                   Text(
                     'Last seen: ${_formatLastSeen(lastSeen)}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: Colors.white.withOpacity(0.8),
+                    style: TextStyle(
+                      color: colors.textSecondary,
+                      fontSize: 13,
                     ),
                   ),
               ],
@@ -447,11 +330,7 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
     );
   }
 
-  Widget _buildSensorGrid(
-    BuildContext context, 
-    List<DeviceField> fields,
-    Map<String, dynamic> state,
-  ) {
+  Widget _buildSensorGrid(List<DeviceField> fields, Map<String, dynamic> state) {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -470,17 +349,13 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
           field: field,
           value: value,
           isLoading: _pendingCommands.contains(field.key),
-          onControlChanged: null, // Sensors don't have controls
+          onControlChanged: null,
         );
       },
     );
   }
 
-  Widget _buildControlsList(
-    BuildContext context,
-    List<DeviceField> fields,
-    Map<String, dynamic> state,
-  ) {
+  Widget _buildControlsList(List<DeviceField> fields, Map<String, dynamic> state) {
     return Column(
       children: fields.map((field) {
         final value = state[field.key];
@@ -498,10 +373,7 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
     );
   }
 
-  Widget _buildRawStateGrid(BuildContext context, Map<String, dynamic> state) {
-    final theme = Theme.of(context);
-    
-    // Flatten and filter state
+  Widget _buildRawStateGrid(Map<String, dynamic> state, AppColors colors) {
     final entries = <MapEntry<String, dynamic>>[];
     for (final entry in state.entries) {
       if (_shouldSkipKey(entry.key)) continue;
@@ -518,9 +390,7 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
       }
     }
 
-    if (entries.isEmpty) {
-      return _buildNoDataCard(context);
-    }
+    if (entries.isEmpty) return _buildNoDataCard(colors);
 
     return GridView.builder(
       shrinkWrap: true,
@@ -535,22 +405,18 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
       itemBuilder: (context, index) {
         final entry = entries[index];
         
-        return Container(
+        return SimpleGlassCard(
           padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(16),
-          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 _formatValue(entry.value),
-                style: theme.textTheme.headlineSmall?.copyWith(
+                style: TextStyle(
+                  color: AppColors.accentPrimary,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -558,8 +424,9 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
               const SizedBox(height: 6),
               Text(
                 _formatKey(entry.key),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                style: TextStyle(
+                  color: colors.textSecondary,
+                  fontSize: 12,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -571,28 +438,23 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
     );
   }
 
-  Widget _buildNoDataCard(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Container(
+  Widget _buildNoDataCard(AppColors colors) {
+    return SimpleGlassCard(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(16),
-      ),
       child: Center(
         child: Column(
           children: [
             Icon(
               Icons.hourglass_empty,
               size: 40,
-              color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+              color: colors.textMuted,
             ),
             const SizedBox(height: 12),
             Text(
               'No data available',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+              style: TextStyle(
+                color: colors.textSecondary,
+                fontSize: 14,
               ),
             ),
           ],
@@ -601,26 +463,128 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
     );
   }
 
-  Widget _buildInfoSection(BuildContext context, Map<String, dynamic> device) {
-    final theme = Theme.of(context);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(16),
-      ),
+  Widget _buildInfoSection(Map<String, dynamic> device, AppColors colors) {
+    return SimpleGlassCard(
+      padding: EdgeInsets.zero,
       child: Column(
         children: [
-          _InfoRow(label: 'ID', value: device['id']),
-          _InfoRow(label: 'Type', value: device['type']?['name'] ?? 'N/A'),
-          _InfoRow(label: 'External ID', value: device['externalId'] ?? 'N/A'),
+          _InfoRow(label: 'ID', value: device['id'], icon: Icons.fingerprint, colors: colors),
+          _InfoRow(label: 'Type', value: device['type']?['name'] ?? 'N/A', icon: Icons.category_outlined, colors: colors),
+          _InfoRow(label: 'External ID', value: device['externalId'] ?? 'N/A', icon: Icons.tag, colors: colors),
           _InfoRow(
             label: 'Created', 
             value: _formatDate(device['createdAt']),
+            icon: Icons.calendar_today_outlined,
+            colors: colors,
             isLast: true,
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildLoadingGrid(int count, AppColors colors) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 1.0,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: count.clamp(1, 4),
+      itemBuilder: (context, index) {
+        return Container(
+          decoration: BoxDecoration(
+            color: colors.backgroundCard,
+            borderRadius: BorderRadius.circular(16),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLoadingControls(int count, AppColors colors) {
+    return Column(
+      children: List.generate(count.clamp(1, 3), (index) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Container(
+            height: 80,
+            decoration: BoxDecoration(
+              color: colors.backgroundCard,
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildErrorState(AppColors colors) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: AppColors.statusError),
+          const SizedBox(height: 16),
+          Text(
+            'Failed to load device',
+            style: TextStyle(color: colors.textPrimary, fontSize: 18),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: () => ref.invalidate(deviceProvider(widget.deviceId)),
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showOptionsMenu(BuildContext context, AppColors colors) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: colors.backgroundCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colors.glassBorder,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ListTile(
+                leading: Icon(Icons.edit_outlined, color: colors.textPrimary),
+                title: Text('Edit Device', style: TextStyle(color: colors.textPrimary)),
+                onTap: () => Navigator.pop(context),
+              ),
+              ListTile(
+                leading: Icon(Icons.history, color: colors.textPrimary),
+                title: Text('View History', style: TextStyle(color: colors.textPrimary)),
+                onTap: () => Navigator.pop(context),
+              ),
+              ListTile(
+                leading: Icon(Icons.delete_outline, color: AppColors.statusError),
+                title: Text('Delete Device', style: TextStyle(color: AppColors.statusError)),
+                onTap: () => Navigator.pop(context),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -673,9 +637,7 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
       return value.toStringAsFixed(value.truncateToDouble() == value ? 0 : 1);
     }
     final str = value.toString();
-    if (str.length > 10) {
-      return '${str.substring(0, 10)}...';
-    }
+    if (str.length > 10) return '${str.substring(0, 10)}...';
     return str;
   }
 }
@@ -683,42 +645,47 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
 class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
+  final IconData icon;
+  final AppColors colors;
   final bool isLast;
 
   const _InfoRow({
     required this.label,
     required this.value,
+    required this.icon,
+    required this.colors,
     this.isLast = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         border: isLast
             ? null
-            : Border(
-                bottom: BorderSide(
-                  color: theme.colorScheme.outline.withOpacity(0.1),
-                ),
-              ),
+            : Border(bottom: BorderSide(color: colors.glassBorder)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+          Icon(icon, color: colors.textMuted, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(color: colors.textSecondary, fontSize: 14),
             ),
           ),
-          Text(
-            value,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w500,
+          Flexible(
+            child: Text(
+              value,
+              style: TextStyle(
+                color: colors.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.right,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

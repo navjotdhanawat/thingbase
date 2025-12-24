@@ -1,235 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
-import '../../../auth/providers/auth_provider.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../shared/widgets/widgets.dart';
+import '../../../auth/providers/auth_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
+    final colors = AppColors.of(context);
     final authState = ref.watch(authStateProvider);
     final branding = ref.watch(brandingProvider);
     final themeMode = ref.watch(themeModeProvider);
 
     return Scaffold(
+      backgroundColor: colors.background,
       appBar: AppBar(
-        title: const Text('Settings'),
+        backgroundColor: colors.background,
+        title: Text(
+          'Settings',
+          style: TextStyle(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Profile section
-          _buildSectionHeader(theme, 'Profile'),
-          Card(
-            child: InkWell(
-              onTap: () {
-                // TODO: Navigate to profile
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundColor: theme.colorScheme.primaryContainer,
-                      child: Text(
-                        (authState.user?.name ?? 'U')[0].toUpperCase(),
-                        style: TextStyle(
-                          color: theme.colorScheme.primary,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            authState.user?.name ?? 'User',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            authState.user?.email ?? '',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(
-                      Icons.chevron_right,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ).animate().fadeIn(),
+          _buildSectionHeader('Profile', colors),
+          _buildProfileCard(context, authState, colors),
 
           const SizedBox(height: 24),
 
-          // Appearance section
-          _buildSectionHeader(theme, 'Appearance'),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.dark_mode),
-                  title: const Text('Theme'),
-                  trailing: SegmentedButton<ThemeMode>(
-                    segments: const [
-                      ButtonSegment(
-                        value: ThemeMode.system,
-                        icon: Icon(Icons.brightness_auto, size: 18),
-                      ),
-                      ButtonSegment(
-                        value: ThemeMode.light,
-                        icon: Icon(Icons.light_mode, size: 18),
-                      ),
-                      ButtonSegment(
-                        value: ThemeMode.dark,
-                        icon: Icon(Icons.dark_mode, size: 18),
-                      ),
-                    ],
-                    selected: {themeMode},
-                    onSelectionChanged: (value) {
-                      ref.read(themeModeProvider.notifier).state = value.first;
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ).animate().fadeIn(delay: 100.ms),
+          _buildSectionHeader('Appearance', colors),
+          _buildAppearanceCard(context, ref, themeMode, colors),
 
           const SizedBox(height: 24),
 
-          // Notifications section
-          _buildSectionHeader(theme, 'Notifications'),
-          Card(
-            child: Column(
-              children: [
-                SwitchListTile(
-                  secondary: const Icon(Icons.notifications),
-                  title: const Text('Push Notifications'),
-                  subtitle: const Text('Receive alerts on your device'),
-                  value: true,
-                  onChanged: (value) {
-                    // TODO: Toggle notifications
-                  },
-                ),
-                const Divider(height: 1),
-                SwitchListTile(
-                  secondary: const Icon(Icons.email),
-                  title: const Text('Email Notifications'),
-                  subtitle: const Text('Receive alerts via email'),
-                  value: true,
-                  onChanged: (value) {
-                    // TODO: Toggle email notifications
-                  },
-                ),
-              ],
-            ),
-          ).animate().fadeIn(delay: 200.ms),
+          _buildSectionHeader('Notifications', colors),
+          _buildNotificationsCard(context, colors),
 
           const SizedBox(height: 24),
 
-          // About section
-          _buildSectionHeader(theme, 'About'),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.info),
-                  title: const Text('App Version'),
-                  trailing: Text(
-                    '1.0.0',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.business),
-                  title: const Text('Organization'),
-                  trailing: Text(
-                    branding.tenantName,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.description),
-                  title: const Text('Terms of Service'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    // TODO: Open terms
-                  },
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.privacy_tip),
-                  title: const Text('Privacy Policy'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    // TODO: Open privacy
-                  },
-                ),
-              ],
-            ),
-          ).animate().fadeIn(delay: 300.ms),
+          _buildSectionHeader('About', colors),
+          _buildAboutCard(context, branding, colors),
 
           const SizedBox(height: 24),
 
-          // Logout button
-          FilledButton.icon(
-            onPressed: () async {
-              final confirmed = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Sign Out'),
-                  content: const Text('Are you sure you want to sign out?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Cancel'),
-                    ),
-                    FilledButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Sign Out'),
-                    ),
-                  ],
-                ),
-              );
-
-              if (confirmed == true) {
-                await ref.read(authStateProvider.notifier).logout();
-                if (context.mounted) {
-                  context.go('/auth/login');
-                }
-              }
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: theme.colorScheme.error,
-              foregroundColor: theme.colorScheme.onError,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-            icon: const Icon(Icons.logout),
-            label: const Text('Sign Out'),
-          ).animate().fadeIn(delay: 400.ms),
+          _buildLogoutButton(context, ref, colors),
 
           const SizedBox(height: 32),
         ],
@@ -237,17 +59,443 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionHeader(ThemeData theme, String title) {
+  Widget _buildSectionHeader(String title, AppColors colors) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 8),
+      padding: const EdgeInsets.only(left: 4, bottom: 12),
       child: Text(
         title,
-        style: theme.textTheme.labelLarge?.copyWith(
-          color: theme.colorScheme.primary,
+        style: TextStyle(
+          color: AppColors.accentPrimary,
+          fontSize: 13,
           fontWeight: FontWeight.w600,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileCard(BuildContext context, dynamic authState, AppColors colors) {
+    return SimpleGlassCard(
+      onTap: () {},
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.accentPrimary, AppColors.accentDark],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.accentPrimary.withOpacity(0.3),
+                  blurRadius: 12,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                (authState.user?.name ?? 'U')[0].toUpperCase(),
+                style: TextStyle(
+                  color: colors.background,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  authState.user?.name ?? 'User',
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  authState.user?.email ?? '',
+                  style: TextStyle(
+                    color: colors.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right, color: colors.textMuted),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAppearanceCard(BuildContext context, WidgetRef ref, ThemeMode themeMode, AppColors colors) {
+    return SimpleGlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: colors.surfaceDim,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Icons.dark_mode, color: colors.textPrimary),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              'Theme',
+              style: TextStyle(
+                color: colors.textPrimary,
+                fontSize: 16,
+              ),
+            ),
+          ),
+          _ThemeToggle(
+            themeMode: themeMode,
+            colors: colors,
+            onChanged: (mode) {
+              ref.read(themeModeProvider.notifier).state = mode;
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationsCard(BuildContext context, AppColors colors) {
+    return SimpleGlassCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          _SettingsSwitch(
+            icon: Icons.notifications_outlined,
+            title: 'Push Notifications',
+            subtitle: 'Receive alerts on your device',
+            value: true,
+            colors: colors,
+            onChanged: (value) {},
+          ),
+          Divider(height: 1, color: colors.glassBorder),
+          _SettingsSwitch(
+            icon: Icons.email_outlined,
+            title: 'Email Notifications',
+            subtitle: 'Receive alerts via email',
+            value: true,
+            colors: colors,
+            onChanged: (value) {},
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAboutCard(BuildContext context, BrandingConfig branding, AppColors colors) {
+    return SimpleGlassCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          _SettingsRow(
+            icon: Icons.info_outline,
+            title: 'App Version',
+            value: '1.0.0',
+            colors: colors,
+          ),
+          Divider(height: 1, color: colors.glassBorder),
+          _SettingsRow(
+            icon: Icons.business,
+            title: 'Organization',
+            value: branding.tenantName,
+            colors: colors,
+          ),
+          Divider(height: 1, color: colors.glassBorder),
+          _SettingsRow(
+            icon: Icons.description_outlined,
+            title: 'Terms of Service',
+            showArrow: true,
+            colors: colors,
+            onTap: () {},
+          ),
+          Divider(height: 1, color: colors.glassBorder),
+          _SettingsRow(
+            icon: Icons.privacy_tip_outlined,
+            title: 'Privacy Policy',
+            showArrow: true,
+            colors: colors,
+            onTap: () {},
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogoutButton(BuildContext context, WidgetRef ref, AppColors colors) {
+    return FilledButton.icon(
+      onPressed: () => _showLogoutDialog(context, ref, colors),
+      style: FilledButton.styleFrom(
+        backgroundColor: AppColors.statusError.withOpacity(0.15),
+        foregroundColor: AppColors.statusError,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: AppColors.statusError.withOpacity(0.3)),
+        ),
+      ),
+      icon: const Icon(Icons.logout),
+      label: const Text('Sign Out'),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context, WidgetRef ref, AppColors colors) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: colors.backgroundCard,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Text(
+          'Sign Out',
+          style: TextStyle(color: colors.textPrimary),
+        ),
+        content: Text(
+          'Are you sure you want to sign out?',
+          style: TextStyle(color: colors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: colors.textSecondary)),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await ref.read(authStateProvider.notifier).logout();
+              if (context.mounted) {
+                context.go('/auth/login');
+              }
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.statusError,
+            ),
+            child: const Text('Sign Out'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ThemeToggle extends StatelessWidget {
+  final ThemeMode themeMode;
+  final AppColors colors;
+  final ValueChanged<ThemeMode> onChanged;
+
+  const _ThemeToggle({
+    required this.themeMode, 
+    required this.colors,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surfaceDim,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ThemeButton(
+            icon: Icons.brightness_auto,
+            isSelected: themeMode == ThemeMode.system,
+            colors: colors,
+            onTap: () => onChanged(ThemeMode.system),
+          ),
+          _ThemeButton(
+            icon: Icons.light_mode,
+            isSelected: themeMode == ThemeMode.light,
+            colors: colors,
+            onTap: () => onChanged(ThemeMode.light),
+          ),
+          _ThemeButton(
+            icon: Icons.dark_mode,
+            isSelected: themeMode == ThemeMode.dark,
+            colors: colors,
+            onTap: () => onChanged(ThemeMode.dark),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ThemeButton extends StatelessWidget {
+  final IconData icon;
+  final bool isSelected;
+  final AppColors colors;
+  final VoidCallback onTap;
+
+  const _ThemeButton({
+    required this.icon,
+    required this.isSelected,
+    required this.colors,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: AppAnimations.normal,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.accentPrimary.withOpacity(0.2) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          icon,
+          size: 20,
+          color: isSelected ? AppColors.accentPrimary : colors.textMuted,
         ),
       ),
     );
   }
 }
 
+class _SettingsSwitch extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final AppColors colors;
+  final ValueChanged<bool> onChanged;
+
+  const _SettingsSwitch({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.colors,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: colors.surfaceDim,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: colors.textPrimary),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 15,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: colors.textMuted,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeColor: AppColors.accentPrimary,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? value;
+  final bool showArrow;
+  final AppColors colors;
+  final VoidCallback? onTap;
+
+  const _SettingsRow({
+    required this.icon,
+    required this.title,
+    required this.colors,
+    this.value,
+    this.showArrow = false,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: colors.surfaceDim,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: colors.textPrimary, size: 20),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  color: colors.textPrimary,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+            if (value != null)
+              Text(
+                value!,
+                style: TextStyle(
+                  color: colors.textMuted,
+                  fontSize: 14,
+                ),
+              ),
+            if (showArrow)
+              Icon(Icons.chevron_right, color: colors.textMuted),
+          ],
+        ),
+      ),
+    );
+  }
+}
