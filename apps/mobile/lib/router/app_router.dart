@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/theme/app_theme.dart';
 import '../features/auth/presentation/screens/login_screen.dart';
 import '../features/auth/presentation/screens/register_screen.dart';
 import '../features/auth/providers/auth_provider.dart';
@@ -23,12 +24,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLoggedIn = authState.isAuthenticated;
       final isAuthRoute = state.matchedLocation.startsWith('/auth');
 
-      // Redirect to login if not authenticated
       if (!isLoggedIn && !isAuthRoute) {
         return '/auth/login';
       }
 
-      // Redirect to dashboard if already authenticated
       if (isLoggedIn && isAuthRoute) {
         return '/dashboard';
       }
@@ -36,9 +35,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      // ═══════════════════════════════════════════════════════════════════════
-      // AUTH ROUTES
-      // ═══════════════════════════════════════════════════════════════════════
       GoRoute(
         path: '/auth/login',
         name: 'login',
@@ -71,9 +67,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
-      // ═══════════════════════════════════════════════════════════════════════
-      // MAIN APP ROUTES (with bottom nav)
-      // ═══════════════════════════════════════════════════════════════════════
       ShellRoute(
         builder: (context, state, child) => MainShell(child: child),
         routes: [
@@ -100,7 +93,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                     key: state.pageKey,
                     child: DeviceDetailScreen(deviceId: deviceId),
                     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                      // Slide in from right with iOS-style curve
                       return SlideTransition(
                         position: Tween<Offset>(
                           begin: const Offset(1.0, 0.0),
@@ -134,9 +126,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
-      // ═══════════════════════════════════════════════════════════════════════
-      // MODAL/FULL-SCREEN ROUTES
-      // ═══════════════════════════════════════════════════════════════════════
       GoRoute(
         path: '/add-device',
         name: 'add-device',
@@ -144,7 +133,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           key: state.pageKey,
           child: const AddDeviceScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            // Slide up from bottom for modal-style screens
             return SlideTransition(
               position: Tween<Offset>(
                 begin: const Offset(0.0, 1.0),
@@ -162,7 +150,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
-/// Main shell with bottom navigation
+/// Main shell with theme-aware bottom navigation
 class MainShell extends StatelessWidget {
   final Widget child;
 
@@ -170,33 +158,14 @@ class MainShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    
     return Scaffold(
+      backgroundColor: colors.background,
       body: child,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _calculateSelectedIndex(context),
-        onDestinationSelected: (index) => _onItemTapped(context, index),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.devices_outlined),
-            selectedIcon: Icon(Icons.devices),
-            label: 'Devices',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.notifications_outlined),
-            selectedIcon: Icon(Icons.notifications),
-            label: 'Alerts',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        ],
+      bottomNavigationBar: _ThemeAwareBottomNav(
+        currentIndex: _calculateSelectedIndex(context),
+        onTap: (index) => _onItemTapped(context, index),
       ),
     );
   }
@@ -228,3 +197,131 @@ class MainShell extends StatelessWidget {
   }
 }
 
+/// Theme-aware bottom navigation bar
+class _ThemeAwareBottomNav extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+
+  const _ThemeAwareBottomNav({
+    required this.currentIndex,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.background,
+        border: Border(
+          top: BorderSide(
+            color: colors.glassBorder,
+            width: 1,
+          ),
+        ),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _NavItem(
+                icon: Icons.home_outlined,
+                selectedIcon: Icons.home_rounded,
+                label: 'Home',
+                isSelected: currentIndex == 0,
+                onTap: () => onTap(0),
+              ),
+              _NavItem(
+                icon: Icons.devices_outlined,
+                selectedIcon: Icons.devices,
+                label: 'Devices',
+                isSelected: currentIndex == 1,
+                onTap: () => onTap(1),
+              ),
+              _NavItem(
+                icon: Icons.notifications_outlined,
+                selectedIcon: Icons.notifications,
+                label: 'Alerts',
+                isSelected: currentIndex == 2,
+                onTap: () => onTap(2),
+              ),
+              _NavItem(
+                icon: Icons.settings_outlined,
+                selectedIcon: Icons.settings,
+                label: 'Settings',
+                isSelected: currentIndex == 3,
+                onTap: () => onTap(3),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _NavItem({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 72,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: AppAnimations.normal,
+              curve: Curves.easeInOut,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              decoration: BoxDecoration(
+                color: isSelected 
+                    ? AppColors.accentPrimary.withOpacity(0.15)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(
+                isSelected ? selectedIcon : icon,
+                color: isSelected 
+                    ? AppColors.accentPrimary
+                    : colors.textMuted,
+                size: 24,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected 
+                    ? AppColors.accentPrimary
+                    : colors.textMuted,
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
