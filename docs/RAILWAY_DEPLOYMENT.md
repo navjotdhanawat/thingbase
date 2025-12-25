@@ -118,14 +118,13 @@ NEXT_PUBLIC_MQTT_BROKER_URL=mqtt://${{Mosquitto.RAILWAY_PUBLIC_DOMAIN}}:1883
 
 Database migrations are handled automatically by GitHub Actions when you push to `main`:
 
-1. **Add GitHub Secrets** (Settings → Secrets → Actions):
+1. **Add GitHub Secret** (Settings → Secrets → Actions):
    - `DATABASE_URL`: Your external PostgreSQL connection string
-   - `RAILWAY_TOKEN`: Get from [Railway Account Tokens](https://railway.app/account/tokens)
 
 2. **Push to main** - The CI/CD pipeline will:
    - ✅ Build all packages
    - ✅ Run migrations (`prisma db push`)
-   - ✅ Deploy API and Web services
+   - ✅ Railway auto-deploys via GitHub integration (no token needed)
 
 ### Option B: Container Startup Migration
 
