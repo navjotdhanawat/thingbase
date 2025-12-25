@@ -6,11 +6,7 @@
   "bin": {
     "iot-simulator": "./dist/cli.js"
   },
-  "scripts": {
-    "build": "tsup src/cli.ts --format esm --target node20",
-    "dev": "tsx src/cli.ts",
-    "start": "node dist/cli.js"
-  },
+  "scripts": {},
   "dependencies": {
     "@thingbase/shared": "workspace:*",
     "commander": "^12.0.0",

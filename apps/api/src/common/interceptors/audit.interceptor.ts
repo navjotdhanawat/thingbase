@@ -28,7 +28,7 @@ export class AuditInterceptor implements NestInterceptor {
   constructor(
     private readonly reflector: Reflector,
     private readonly auditService: AuditService,
-  ) {}
+  ) { }
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const auditOptions = this.reflector.get<AuditOptions>(
@@ -55,7 +55,7 @@ export class AuditInterceptor implements NestInterceptor {
         next: (response) => {
           // Get resource ID from params, body, or response
           let resourceId: string | undefined;
-          
+
           if (auditOptions.resourceIdParam) {
             resourceId = request.params[auditOptions.resourceIdParam];
           } else if (response?.data?.id) {
@@ -70,8 +70,28 @@ export class AuditInterceptor implements NestInterceptor {
           };
 
           if (auditOptions.includeBody && request.body) {
-            // Exclude sensitive fields
-            const { password, passwordHash, token, ...safeBody } = request.body;
+            // Redact sensitive fields to prevent secret leakage in audit logs
+            const sensitiveFields = [
+              'password',
+              'passwordHash',
+              'token',
+              'refreshToken',
+              'accessToken',
+              'currentPassword',
+              'newPassword',
+              'provisionToken',
+              'claimToken',
+              'mqttPassword',
+              'secret',
+              'apiKey',
+            ];
+
+            const safeBody = { ...request.body };
+            for (const field of sensitiveFields) {
+              if (field in safeBody) {
+                safeBody[field] = '[REDACTED]';
+              }
+            }
             metadata.body = safeBody;
           }
 

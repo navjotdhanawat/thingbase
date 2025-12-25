@@ -5,7 +5,7 @@ import { RedisService } from '../../redis/redis.service';
 import { CommandsService } from '../commands/commands.service';
 import { AlertEvaluatorService } from '../alerts/alert-evaluator.service';
 import { REDIS_KEYS } from '@thingbase/shared';
-import { mqttAckPayloadSchema } from '@thingbase/shared';
+import { mqttAckPayloadSchema, mqttTelemetryPayloadSchema, mqttStatusPayloadSchema } from '@thingbase/shared';
 
 @Injectable()
 export class MqttHandlers implements OnModuleInit {
@@ -40,14 +40,34 @@ export class MqttHandlers implements OnModuleInit {
     }
 
     try {
-      const data = JSON.parse(payload.toString());
+      const rawData = JSON.parse(payload.toString());
+
+      // Validate payload structure
+      const parseResult = mqttTelemetryPayloadSchema.safeParse(rawData);
+      if (!parseResult.success) {
+        this.logger.warn(`Invalid telemetry payload from ${deviceId}: ${JSON.stringify(parseResult.error.format())}`);
+        return;
+      }
+
+      const data = parseResult.data;
+
+      // Verify device belongs to tenant (security: prevents cross-tenant data injection)
+      const device = await this.prisma.device.findFirst({
+        where: { id: deviceId, tenantId },
+        select: { id: true },
+      });
+
+      if (!device) {
+        this.logger.warn(`Device ${deviceId} not found in tenant ${tenantId} - possible topic spoofing`);
+        return;
+      }
 
       // Store telemetry in database
       await this.prisma.telemetry.create({
         data: {
           tenantId,
           deviceId,
-          data,
+          data: data as any, // Cast for Prisma JSON type compatibility
         },
       });
 
@@ -190,8 +210,28 @@ export class MqttHandlers implements OnModuleInit {
     }
 
     try {
-      const data = JSON.parse(payload.toString());
+      const rawData = JSON.parse(payload.toString());
+
+      // Validate payload structure
+      const parseResult = mqttStatusPayloadSchema.safeParse(rawData);
+      if (!parseResult.success) {
+        this.logger.warn(`Invalid status payload from ${deviceId}: ${JSON.stringify(parseResult.error.format())}`);
+        return;
+      }
+
+      const data = parseResult.data;
       const online = data.status === 'online';
+
+      // Verify device belongs to tenant (security: prevents cross-tenant data injection)
+      const device = await this.prisma.device.findFirst({
+        where: { id: deviceId, tenantId },
+        select: { id: true },
+      });
+
+      if (!device) {
+        this.logger.warn(`Device ${deviceId} not found in tenant ${tenantId} - possible topic spoofing`);
+        return;
+      }
 
       // Update device status
       await this.prisma.device.update({

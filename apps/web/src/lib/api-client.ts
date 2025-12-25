@@ -33,6 +33,11 @@ interface PaginatedResponse<T> {
 
 class ApiClient {
   private accessToken: string | null = null;
+  private refreshToken: string | null = null;
+  private isRefreshing = false;
+  private refreshSubscribers: Array<(token: string) => void> = [];
+  private onTokenRefreshed: ((tokens: { accessToken: string; refreshToken: string }) => void) | null = null;
+  private onSessionExpired: (() => void) | null = null;
 
   setAccessToken(token: string | null) {
     this.accessToken = token;
@@ -42,7 +47,62 @@ class ApiClient {
     return this.accessToken;
   }
 
-  private async fetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  setRefreshToken(token: string | null) {
+    this.refreshToken = token;
+  }
+
+  // Register callbacks for token events
+  onAuthEvents(callbacks: {
+    onTokenRefreshed?: (tokens: { accessToken: string; refreshToken: string }) => void;
+    onSessionExpired?: () => void;
+  }) {
+    this.onTokenRefreshed = callbacks.onTokenRefreshed || null;
+    this.onSessionExpired = callbacks.onSessionExpired || null;
+  }
+
+  private subscribeToTokenRefresh(callback: (token: string) => void) {
+    this.refreshSubscribers.push(callback);
+  }
+
+  private onRefreshSuccess(token: string) {
+    this.refreshSubscribers.forEach((callback) => callback(token));
+    this.refreshSubscribers = [];
+  }
+
+  private async attemptTokenRefresh(): Promise<string | null> {
+    if (!this.refreshToken) {
+      return null;
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: this.refreshToken }),
+      });
+
+      const response = await res.json();
+
+      if (res.ok && response.success) {
+        const { accessToken, refreshToken } = response.data;
+        this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
+
+        // Notify auth store of new tokens
+        if (this.onTokenRefreshed) {
+          this.onTokenRefreshed({ accessToken, refreshToken });
+        }
+
+        return accessToken;
+      }
+    } catch (error) {
+      console.error('[API] Token refresh failed:', error);
+    }
+
+    return null;
+  }
+
+  private async fetch<T>(path: string, options: RequestInit = {}, isRetry = false): Promise<T> {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options.headers,
@@ -57,6 +117,47 @@ class ApiClient {
       ...options,
       headers,
     });
+
+    // Handle 401 Unauthorized - attempt token refresh
+    if (res.status === 401 && !isRetry && !path.includes('/auth/')) {
+      if (this.isRefreshing) {
+        // Wait for the ongoing refresh to complete
+        return new Promise((resolve, reject) => {
+          this.subscribeToTokenRefresh(async (newToken) => {
+            try {
+              const result = await this.fetch<T>(path, options, true);
+              resolve(result);
+            } catch (error) {
+              reject(error);
+            }
+          });
+        });
+      }
+
+      this.isRefreshing = true;
+
+      try {
+        const newToken = await this.attemptTokenRefresh();
+
+        if (newToken) {
+          this.isRefreshing = false;
+          this.onRefreshSuccess(newToken);
+          // Retry the original request with new token
+          return this.fetch<T>(path, options, true);
+        } else {
+          // Refresh failed - session expired
+          this.isRefreshing = false;
+          if (this.onSessionExpired) {
+            this.onSessionExpired();
+          }
+        }
+      } catch {
+        this.isRefreshing = false;
+        if (this.onSessionExpired) {
+          this.onSessionExpired();
+        }
+      }
+    }
 
     const response: ApiResponseWrapper<T> = await res.json();
 
@@ -105,7 +206,7 @@ class ApiClient {
     }>('/auth/login', { method: 'POST', body: JSON.stringify(data) });
   }
 
-  async refreshToken(refreshToken: string) {
+  async refreshTokenRequest(refreshToken: string) {
     return this.fetch<{
       accessToken: string;
       refreshToken: string;

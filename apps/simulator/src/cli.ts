@@ -62,6 +62,8 @@ program
   .requiredOption('-d, --device <deviceId>', 'Device ID')
   .option('--type <preset>', 'Device type preset (thermostat, switch, water-pump, egg-incubator, soil-sensor, generic)', 'thermostat')
   .option('-u, --mqtt-url <url>', 'MQTT broker URL', 'mqtt://localhost:1883')
+  .option('--mqtt-user <username>', 'MQTT username for authentication')
+  .option('--mqtt-pass <password>', 'MQTT password for authentication')
   .option('-i, --interval <ms>', 'Telemetry interval in milliseconds', '5000')
   .option('--fail-rate <rate>', 'Command failure rate (0-1)', '0')
   .option('--latency <ms>', 'Command response latency in milliseconds', '100')
@@ -87,6 +89,8 @@ program
 
     const config: SimulatorConfig = {
       mqttUrl: options.mqttUrl,
+      mqttUsername: options.mqttUser,
+      mqttPassword: options.mqttPass,
       tenantId: options.tenant,
       deviceId: options.device,
       telemetryIntervalMs: parseInt(options.interval, 10),
@@ -143,6 +147,8 @@ program
   .option('-p, --prefix <prefix>', 'Device ID prefix', 'sim-device')
   .option('--type <preset>', 'Device type preset', 'thermostat')
   .option('-u, --mqtt-url <url>', 'MQTT broker URL', 'mqtt://localhost:1883')
+  .option('--mqtt-user <username>', 'MQTT username for authentication')
+  .option('--mqtt-pass <password>', 'MQTT password for authentication')
   .option('-i, --interval <ms>', 'Telemetry interval in milliseconds', '5000')
   .action(async (options) => {
     const preset = options.type as DevicePreset;
@@ -162,6 +168,8 @@ program
     for (let i = 0; i < count; i++) {
       const config: SimulatorConfig = {
         mqttUrl: options.mqttUrl,
+        mqttUsername: options.mqttUser,
+        mqttPassword: options.mqttPass,
         tenantId: options.tenant,
         deviceId: `${options.prefix}-${i + 1}`,
         telemetryIntervalMs: parseInt(options.interval, 10) + Math.random() * 1000,
