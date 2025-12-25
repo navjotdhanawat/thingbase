@@ -35,17 +35,23 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
+# Install pnpm in runner (needed for pnpm's symlink resolution)
+RUN npm install -g pnpm@9
+
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nestjs
 
-# Copy built artifacts
-COPY --from=builder /app/apps/api/dist ./dist
-COPY --from=builder /app/apps/api/package.json ./
-COPY --from=builder /app/apps/api/prisma ./prisma
-COPY --from=builder /app/apps/api/node_modules ./node_modules
-COPY --from=builder /app/packages/shared/dist ./node_modules/@thingbase/shared/dist
-COPY --from=builder /app/packages/shared/package.json ./node_modules/@thingbase/shared/
+# Copy workspace files for pnpm
+COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=builder /app/apps/api/package.json ./apps/api/
+COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
+COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder /app/packages/shared/package.json ./packages/shared/
+
+WORKDIR /app/apps/api
 
 # Set ownership
 RUN chown -R nestjs:nodejs /app
@@ -59,5 +65,5 @@ EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3001/api/health || exit 1
 
-# Start directly without entrypoint script (migrations handled by GitHub Actions)
+# Start the API
 CMD ["node", "dist/main.js"]
