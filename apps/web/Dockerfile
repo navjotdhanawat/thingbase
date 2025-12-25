@@ -43,16 +43,33 @@ RUN pnpm build --filter=@thingbase/web
 FROM node:20-alpine AS runner
 WORKDIR /app
 
+# Install pnpm in runner (needed if Railway runs pnpm start)
+RUN npm install -g pnpm@9
+
 ENV NODE_ENV=production
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy built artifacts
+# Copy workspace files for pnpm
+COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
+COPY --from=builder /app/node_modules ./node_modules
+
+# Copy built app with standalone output
+COPY --from=builder /app/apps/web ./apps/web
+COPY --from=builder /app/packages/shared ./packages/shared
+
+WORKDIR /app/apps/web
+
+# Copy standalone files to working directory for pnpm start compatibility
+COPY --from=builder /app/apps/web/.next/standalone/apps/web/server.js ./server.js
+COPY --from=builder /app/apps/web/.next/standalone/node_modules ./node_modules_standalone
 COPY --from=builder /app/apps/web/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./.next/static
+COPY --from=builder /app/apps/web/.next/static ./.next/static
+
+# Set ownership
+RUN chown -R nextjs:nodejs /app
 
 USER nextjs
 
