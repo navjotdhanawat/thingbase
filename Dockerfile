@@ -1,64 +1,66 @@
 # ============================================
-# ThingBase Web - Production Dockerfile
+# ThingBase API - Production Dockerfile
 # ============================================
 
-# Stage 1: Dependencies
-FROM node:20-alpine AS deps
+# Stage 1: Build
+FROM node:20-alpine AS builder
+
 WORKDIR /app
 
+# Install pnpm
 RUN npm install -g pnpm@9
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/web/package.json ./apps/web/
+# Copy workspace files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+COPY apps/api/package.json ./apps/api/
 COPY packages/shared/package.json ./packages/shared/
 
+# Install all dependencies
 RUN pnpm install --frozen-lockfile
 
-# Stage 2: Build
-FROM node:20-alpine AS builder
+# Copy source code
+COPY apps/api ./apps/api
+COPY packages/shared ./packages/shared
+COPY tsconfig.json ./
+
+# Build shared package first, then API
+RUN pnpm build --filter=@thingbase/shared
+RUN pnpm build --filter=@thingbase/api
+
+# Generate Prisma client
+RUN cd apps/api && pnpm db:generate
+
+# Stage 2: Production
+FROM node:20-alpine AS runner
+
 WORKDIR /app
 
+# Install pnpm in runner (needed if pnpm start is used)
 RUN npm install -g pnpm@9
 
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
-COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
-
-COPY . .
-
-# Build shared package first
-RUN pnpm build --filter=@thingbase/shared
-
-# Set Next.js build-time environment variables
-ARG NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-
-ARG NEXT_PUBLIC_MQTT_BROKER_URL
-ENV NEXT_PUBLIC_MQTT_BROKER_URL=$NEXT_PUBLIC_MQTT_BROKER_URL
-
-# Build Next.js app
-RUN pnpm build --filter=@thingbase/web
-
-# Stage 3: Production
-FROM node:20-alpine AS runner
-WORKDIR /app
-
-ENV NODE_ENV=production
-
-# Create non-root user
+# Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN adduser --system --uid 1001 nestjs
 
-# Copy built artifacts
-COPY --from=builder /app/apps/web/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./.next/static
+# Copy the entire pnpm workspace structure
+COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/api ./apps/api
+COPY --from=builder /app/packages/shared ./packages/shared
 
-USER nextjs
+WORKDIR /app/apps/api
 
-EXPOSE 3000
+# Set ownership
+RUN chown -R nestjs:nodejs /app
 
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
+USER nestjs
 
-CMD ["node", "server.js"]
+# Expose port
+EXPOSE 3001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3001/api/health || exit 1
+
+# Start the API directly with node - this is the Docker CMD
+CMD ["node", "dist/main.js"]

@@ -35,21 +35,18 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Install pnpm in runner (needed for pnpm's symlink resolution)
+# Install pnpm in runner (needed if pnpm start is used)
 RUN npm install -g pnpm@9
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nestjs
 
-# Copy workspace files for pnpm
+# Copy the entire pnpm workspace structure
 COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/apps/api/package.json ./apps/api/
-COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
-COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
-COPY --from=builder /app/packages/shared/package.json ./packages/shared/
+COPY --from=builder /app/apps/api ./apps/api
+COPY --from=builder /app/packages/shared ./packages/shared
 
 WORKDIR /app/apps/api
 
@@ -65,5 +62,5 @@ EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3001/api/health || exit 1
 
-# Start the API
+# Start the API directly with node - this is the Docker CMD
 CMD ["node", "dist/main.js"]
