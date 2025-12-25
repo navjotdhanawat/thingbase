@@ -47,10 +47,6 @@ COPY --from=builder /app/apps/api/node_modules ./node_modules
 COPY --from=builder /app/packages/shared/dist ./node_modules/@thingbase/shared/dist
 COPY --from=builder /app/packages/shared/package.json ./node_modules/@thingbase/shared/
 
-# Copy startup script
-COPY apps/api/docker-entrypoint.sh ./docker-entrypoint.sh
-RUN chmod +x ./docker-entrypoint.sh
-
 # Set ownership
 RUN chown -R nestjs:nodejs /app
 
@@ -63,6 +59,5 @@ EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3001/api/health || exit 1
 
-# Use entrypoint script for migrations
-ENTRYPOINT ["./docker-entrypoint.sh"]
+# Start directly without entrypoint script (migrations handled by GitHub Actions)
 CMD ["node", "dist/main.js"]
