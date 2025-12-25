@@ -18,7 +18,7 @@ interface AuthState {
   refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  
+
   // Actions
   setAuth: (data: {
     user: User;
@@ -42,6 +42,7 @@ export const useAuthStore = create<AuthState>()(
 
       setAuth: ({ user, accessToken, refreshToken }) => {
         api.setAccessToken(accessToken);
+        api.setRefreshToken(refreshToken);
         set({
           user,
           accessToken,
@@ -57,6 +58,7 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         api.setAccessToken(null);
+        api.setRefreshToken(null);
         set({
           user: null,
           accessToken: null,
@@ -71,8 +73,9 @@ export const useAuthStore = create<AuthState>()(
         if (!refreshToken) return false;
 
         try {
-          const tokens = await api.refreshToken(refreshToken);
+          const tokens = await api.refreshTokenRequest(refreshToken);
           api.setAccessToken(tokens.accessToken);
+          api.setRefreshToken(tokens.refreshToken);
           set({
             accessToken: tokens.accessToken,
             refreshToken: tokens.refreshToken,
@@ -86,7 +89,20 @@ export const useAuthStore = create<AuthState>()(
 
       initialize: async () => {
         const { accessToken, refreshToken } = get();
-        
+
+        // Register auth event callbacks with API client
+        api.onAuthEvents({
+          onTokenRefreshed: (tokens) => {
+            set({
+              accessToken: tokens.accessToken,
+              refreshToken: tokens.refreshToken,
+            });
+          },
+          onSessionExpired: () => {
+            get().logout();
+          },
+        });
+
         if (!accessToken && !refreshToken) {
           set({ isLoading: false });
           return;
@@ -94,6 +110,7 @@ export const useAuthStore = create<AuthState>()(
 
         if (accessToken) {
           api.setAccessToken(accessToken);
+          api.setRefreshToken(refreshToken);
           try {
             const userData = await api.getMe();
             const user: User = { ...userData, role: userData.role as 'admin' | 'user' };
@@ -129,7 +146,7 @@ export const useAuthStore = create<AuthState>()(
             }
           }
         }
-        
+
         set({ isLoading: false });
       },
     }),

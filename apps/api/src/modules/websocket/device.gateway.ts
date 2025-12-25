@@ -30,7 +30,25 @@ interface SendCommandPayload {
 
 @WebSocketGateway({
   cors: {
-    origin: '*',
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      // Allow requests with no origin (mobile apps, curl, devices)
+      if (!origin) return callback(null, true);
+
+      // In development, allow all localhost origins
+      if (process.env.NODE_ENV !== 'production') {
+        if (origin.startsWith('http://localhost:')) {
+          return callback(null, true);
+        }
+      }
+
+      // In production, check against allowed origins
+      const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000').split(',');
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
   },
   namespace: '/devices',

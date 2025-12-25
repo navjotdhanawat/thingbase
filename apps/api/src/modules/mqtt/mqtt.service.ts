@@ -16,17 +16,22 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
   private client: mqtt.MqttClient | null = null;
   private messageHandlers: Map<string, (message: MqttMessage) => void> = new Map();
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(private readonly configService: ConfigService) { }
 
   async onModuleInit() {
     const mqttUrl = this.configService.get<string>('mqtt.url');
-    
+    const mqttUsername = this.configService.get<string>('mqtt.username');
+    const mqttPassword = this.configService.get<string>('mqtt.password');
+
     try {
       this.client = mqtt.connect(mqttUrl!, {
         clientId: `iot-api-${Date.now()}`,
         clean: true,
         connectTimeout: 4000,
         reconnectPeriod: 1000,
+        // Authentication credentials for MQTT broker
+        username: mqttUsername,
+        password: mqttPassword,
       });
 
       this.client.on('connect', () => {

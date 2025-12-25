@@ -10,7 +10,7 @@ import { RedisService } from '../../redis/redis.service';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes, createHash } from 'crypto';
 import type { Device, CreateDevice, UpdateDevice } from '@thingbase/shared';
-import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, REDIS_KEYS } from '@thingbase/shared';
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, REDIS_KEYS, MQTT_TOPICS } from '@thingbase/shared';
 
 interface DeviceFilterParams {
   page?: number;
@@ -538,6 +538,7 @@ export class DevicesService {
       topics: {
         telemetry: string;
         commands: string;
+        ack: string;
         status: string;
       };
     };
@@ -619,9 +620,10 @@ export class DevicesService {
         username: device.id,
         password: mqttPassword,
         topics: {
-          telemetry: `t/${device.tenantId}/d/${device.id}/telemetry`,
-          commands: `t/${device.tenantId}/d/${device.id}/cmd`,
-          status: `t/${device.tenantId}/d/${device.id}/status`,
+          telemetry: MQTT_TOPICS.TELEMETRY(device.tenantId, device.id),
+          commands: MQTT_TOPICS.COMMAND(device.tenantId, device.id),
+          ack: MQTT_TOPICS.ACK(device.tenantId, device.id),
+          status: MQTT_TOPICS.STATUS(device.tenantId, device.id),
         },
       },
     };

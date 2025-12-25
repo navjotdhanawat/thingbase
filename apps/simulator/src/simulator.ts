@@ -17,6 +17,8 @@ export type DevicePreset =
 
 export interface SimulatorConfig {
   mqttUrl: string;
+  mqttUsername?: string;  // MQTT authentication username
+  mqttPassword?: string;  // MQTT authentication password
   tenantId: string;
   deviceId: string;
   telemetryIntervalMs: number;
@@ -167,6 +169,9 @@ export class DeviceSimulator {
         clean: true,
         connectTimeout: 5000,
         reconnectPeriod: 3000,
+        // MQTT authentication credentials
+        username: this.config.mqttUsername,
+        password: this.config.mqttPassword,
         will: {
           topic: statusTopic,
           payload: JSON.stringify({ status: 'offline', timestamp: new Date().toISOString() }),
@@ -240,9 +245,9 @@ export class DeviceSimulator {
 
     console.log(chalk.blue(`📊 Starting telemetry (every ${telemetryIntervalMs}ms)`));
 
-    this.telemetryTimer = setInterval(() => {
-      this.publishTelemetry();
-    }, telemetryIntervalMs);
+    // this.telemetryTimer = setInterval(() => {
+    //   this.publishTelemetry();
+    // }, telemetryIntervalMs);
 
     // Publish initial telemetry
     this.publishTelemetry();

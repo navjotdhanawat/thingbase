@@ -37,10 +37,12 @@ services:
       - "9001:9001"
     volumes:
       - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./infra/mosquitto/passwd:/mosquitto/config/passwd
+      - ./infra/mosquitto/acl.conf:/mosquitto/config/acl.conf
       - mosquitto_data:/mosquitto/data
       - mosquitto_log:/mosquitto/log
     healthcheck:
-      test: ["CMD", "mosquitto_sub", "-t", "$$SYS/#", "-C", "1", "-i", "healthcheck", "-W", "3"]
+      test: ["CMD", "mosquitto_sub", "-t", "$$SYS/#", "-C", "1", "-i", "healthcheck", "-W", "3", "-u", "iot-api", "-P", "dev-mqtt-password"]
       interval: 10s
       timeout: 5s
       retries: 3

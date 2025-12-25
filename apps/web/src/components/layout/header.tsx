@@ -50,10 +50,8 @@ export function Header({ title, onMenuClick, showMobileMenu = true, className }:
         />
       </div>
 
-      <div className="flex-1 md:hidden" />
-
-      {/* Right side actions */}
-      <div className="flex items-center gap-2">
+      {/* Right side actions - always stick to right */}
+      <div className="ml-auto flex items-center gap-2">
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
           <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-destructive" />
