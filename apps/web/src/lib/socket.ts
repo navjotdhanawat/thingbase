@@ -68,7 +68,9 @@ export function connectSocket(): Socket {
     throw new Error('No access token available');
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  // Get API URL and strip /api/v1 suffix if present (WebSocket needs base URL)
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const baseUrl = apiUrl.replace(/\/api\/v1\/?$/, '');
 
   socket = io(`${baseUrl}/devices`, {
     transports: ['websocket', 'polling'],
