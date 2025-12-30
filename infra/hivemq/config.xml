@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hivemq xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="config.xsd">
+
+    <!-- HiveMQ Configuration for ThingBase IoT Platform -->
+    
+    <listeners>
+        <!-- Standard MQTT listener -->
+        <tcp-listener>
+            <port>1883</port>
+            <bind-address>0.0.0.0</bind-address>
+        </tcp-listener>
+    </listeners>
+
+    <!-- MQTT Specific Configuration -->
+    <mqtt>
+        <queued-messages>
+            <max-queue-size>1000</max-queue-size>
+            <strategy>discard</strategy>
+        </queued-messages>
+        
+        <receive-maximum>
+            <server-receive-maximum>10</server-receive-maximum>
+        </receive-maximum>
+        
+        <keep-alive>
+            <max-keep-alive>120</max-keep-alive>
+            <allow-unlimited>false</allow-unlimited>
+        </keep-alive>
+        
+        <topic-alias>
+            <enabled>true</enabled>
+            <max-per-client>5</max-per-client>
+        </topic-alias>
+        
+        <message-expiry>
+            <max-interval>604800</max-interval>
+        </message-expiry>
+    </mqtt>
+
+    <!-- Security Configuration -->
+    <security>
+        <!-- 
+            HiveMQ CE requires extensions for authentication.
+            For production, use HiveMQ Cloud which supports HTTP auth.
+            For now, we allow anonymous but validate at API level.
+        -->
+        <allow-anonymous>true</allow-anonymous>
+    </security>
+
+    <!-- Cluster disabled for single node -->
+    <cluster>
+        <enabled>false</enabled>
+    </cluster>
+
+    <!-- Overload protection -->
+    <overload-protection>
+        <enabled>true</enabled>
+    </overload-protection>
+
+</hivemq>
