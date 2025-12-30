@@ -1,5 +1,6 @@
 #include "claim.h"
 #include "config.h"
+#include "esp_wifi.h"
 #include "provisioning.h"
 #include "storage.h"
 #include <Arduino.h>
@@ -73,14 +74,61 @@ void setup() {
     Serial.printf("[Main] DEBUG - IsValid: %d\n", wifiCreds.isValid);
 
     if (wifiCreds.isValid) {
+      Serial.println("[Main] Performing Exhaustive WiFi Reset...");
+
+      WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info) {
+        Serial.printf("[WiFi Event] %d: ", event);
+        if (event == ARDUINO_EVENT_WIFI_STA_DISCONNECTED) {
+          Serial.printf("Disconnected, Reason: %d\n",
+                        info.wifi_sta_disconnected.reason);
+        } else if (event == ARDUINO_EVENT_WIFI_STA_CONNECTED) {
+          Serial.println("Connected to AP");
+        } else if (event == ARDUINO_EVENT_WIFI_STA_GOT_IP) {
+          Serial.printf("Got IP: %s\n", WiFi.localIP().toString().c_str());
+        } else {
+          Serial.println("Other event");
+        }
+      });
+
+      WiFi.persistent(false);
+      WiFi.disconnect(true, true); // Clear both connection and NVS saved config
+      WiFi.mode(WIFI_OFF);
+      delay(1000);
+
       WiFi.mode(WIFI_STA);
+      WiFi.setHostname("ThingBase-Device");
+      delay(500);
+
+      // ESP-IDF level power save disable
+      esp_wifi_set_ps(WIFI_PS_NONE);
+
+      Serial.printf(
+          "[Main] Connecting to WiFi: SSID='%s', Password Length=%d\n",
+          wifiCreds.ssid, strlen(wifiCreds.password));
+
       WiFi.begin(wifiCreds.ssid, wifiCreds.password);
 
+      // Set TX Power after begin()
+      WiFi.setTxPower(WIFI_POWER_19_5dBm);
+
       unsigned long startTime = millis();
-      while (WiFi.status() != WL_CONNECTED && millis() - startTime < 30000) {
-        delay(500);
+      bool ledState = false;
+
+      while (WiFi.status() != WL_CONNECTED &&
+             millis() - startTime < 60000) { // 60s timeout
+        delay(1000);
         Serial.print(".");
+
+        ledState = !ledState;
+        digitalWrite(LED_PIN, ledState);
+
+        if (WiFi.status() == WL_CONNECT_FAILED) {
+          Serial.println("\n[WiFi] HARD FAILURE: WL_CONNECT_FAILED (Possible "
+                         "bad password)");
+          break;
+        }
       }
+      digitalWrite(LED_PIN, LOW);
       Serial.println();
 
       if (WiFi.status() == WL_CONNECTED) {

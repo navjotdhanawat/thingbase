@@ -96,13 +96,23 @@ NODE_ENV=production
 PORT=3001
 DATABASE_URL=<your-neon-or-supabase-connection-string>
 REDIS_URL=${{Redis.REDIS_URL}}
-MQTT_URL=mqtt://<EMQX-TCP-PROXY-HOST>:<PORT>
-MQTT_USERNAME=iot-api
-MQTT_PASSWORD=<your-mqtt-api-password>
-MQTT_API_USERNAME=iot-api
-MQTT_API_PASSWORD=<your-mqtt-api-password>
-MQTT_SIMULATOR_USERNAME=iot-simulator
-MQTT_SIMULATOR_PASSWORD=<your-mqtt-simulator-password>
+
+### MQTT Broker (EMQX Cloud)
+
+Configuring for EMQX Cloud Serverless/Dedicated:
+
+- `MQTT_URL`: `mqtts://<your-cluster>.emqxsl.com:8883`
+- `MQTT_USERNAME`: `iot-service` (Created in EMQX Console)
+- `MQTT_PASSWORD`: `<your-password>`
+- `MQTT_DEVICE_USERNAME`: `device` (Shared credential for all devices)
+- `MQTT_DEVICE_PASSWORD`: `<device-password>`
+
+### System Credentials
+
+- `MQTT_API_USERNAME`: `iot-service`
+- `MQTT_API_PASSWORD`: `<your-password>`
+- `MQTT_SIMULATOR_USERNAME`: `iot-simulator`
+- `MQTT_SIMULATOR_PASSWORD`: `<your-password>`
 JWT_SECRET=<generate-a-strong-32-char-secret>
 JWT_ACCESS_EXPIRES_IN=15m
 JWT_REFRESH_EXPIRES_IN=7d
