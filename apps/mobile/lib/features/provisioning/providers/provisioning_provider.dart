@@ -40,6 +40,7 @@ class ProvisioningState {
   final DeviceInfo? deviceInfo;
   final WifiConnectionStatus? wifiStatus;
   final String? selectedSsid;
+  final List<Map<String, dynamic>> deviceTypes;
 
   const ProvisioningState({
     this.isLoading = false,
@@ -56,6 +57,7 @@ class ProvisioningState {
     this.deviceInfo,
     this.wifiStatus,
     this.selectedSsid,
+    this.deviceTypes = const [],
   });
 
   ProvisioningState copyWith({
@@ -73,6 +75,7 @@ class ProvisioningState {
     DeviceInfo? deviceInfo,
     WifiConnectionStatus? wifiStatus,
     String? selectedSsid,
+    List<Map<String, dynamic>>? deviceTypes,
   }) {
     return ProvisioningState(
       isLoading: isLoading ?? this.isLoading,
@@ -89,6 +92,7 @@ class ProvisioningState {
       deviceInfo: deviceInfo ?? this.deviceInfo,
       wifiStatus: wifiStatus ?? this.wifiStatus,
       selectedSsid: selectedSsid ?? this.selectedSsid,
+      deviceTypes: deviceTypes ?? this.deviceTypes,
     );
   }
 }
@@ -117,6 +121,26 @@ class ProvisioningNotifier extends StateNotifier<ProvisioningState> {
       selectedMethod: method,
       currentStep: ProvisioningStep.enterDeviceDetails,
     );
+    // Fetch device types when entering device details
+    fetchDeviceTypes();
+  }
+
+  /// Fetch available device types from API
+  Future<void> fetchDeviceTypes() async {
+    try {
+      final dio = _ref.read(dioProvider);
+      final response = await dio.get('/device-types');
+      
+      if (response.data['success'] == true) {
+        final types = (response.data['data'] as List)
+            .map((e) => e as Map<String, dynamic>)
+            .toList();
+        state = state.copyWith(deviceTypes: types);
+      }
+    } catch (e) {
+      // Silently fail - device types are optional
+      print('Failed to fetch device types: $e');
+    }
   }
 
   /// Go back to previous step

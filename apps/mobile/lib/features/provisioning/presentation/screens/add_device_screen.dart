@@ -30,6 +30,35 @@ class _AddDeviceScreenState extends ConsumerState<AddDeviceScreen> {
     super.dispose();
   }
 
+  /// Map icon string from API to Lucide icon
+  IconData _getIconForType(String? iconName) {
+    switch (iconName) {
+      case 'toggle-left':
+      case 'toggle-right':
+        return LucideIcons.toggleLeft;
+      case 'thermometer':
+        return LucideIcons.thermometer;
+      case 'gauge':
+        return LucideIcons.gauge;
+      case 'power':
+        return LucideIcons.power;
+      case 'wifi':
+        return LucideIcons.wifi;
+      case 'cpu':
+        return LucideIcons.cpu;
+      case 'sun':
+        return LucideIcons.sun;
+      case 'droplet':
+        return LucideIcons.droplet;
+      case 'activity':
+        return LucideIcons.activity;
+      case 'zap':
+        return LucideIcons.zap;
+      default:
+        return LucideIcons.cpu;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -214,32 +243,32 @@ class _AddDeviceScreenState extends ConsumerState<AddDeviceScreen> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _DeviceTypeChip(
-                label: 'Switch/Relay',
-                icon: LucideIcons.toggleLeft,
-                isSelected: _selectedDeviceTypeId == 'switch',
-                onTap: () => setState(() => _selectedDeviceTypeId = 'switch'),
-              ),
-              _DeviceTypeChip(
-                label: 'Sensor',
-                icon: LucideIcons.thermometer,
-                isSelected: _selectedDeviceTypeId == 'sensor',
-                onTap: () => setState(() => _selectedDeviceTypeId = 'sensor'),
-              ),
-              _DeviceTypeChip(
-                label: 'Thermostat',
-                icon: LucideIcons.gauge,
-                isSelected: _selectedDeviceTypeId == 'thermostat',
-                onTap: () => setState(() => _selectedDeviceTypeId = 'thermostat'),
-              ),
+              // Show device types from API
+              ...state.deviceTypes.map((type) => _DeviceTypeChip(
+                label: type['name'] as String? ?? 'Unknown',
+                icon: _getIconForType(type['icon'] as String?),
+                isSelected: _selectedDeviceTypeId == type['id'],
+                onTap: () => setState(() => _selectedDeviceTypeId = type['id'] as String?),
+              )),
+              // Always show "Other" option when no type is needed
               _DeviceTypeChip(
                 label: 'Other',
                 icon: LucideIcons.cpu,
-                isSelected: _selectedDeviceTypeId == 'other',
-                onTap: () => setState(() => _selectedDeviceTypeId = 'other'),
+                isSelected: _selectedDeviceTypeId == null && state.deviceTypes.isNotEmpty,
+                onTap: () => setState(() => _selectedDeviceTypeId = null),
               ),
+              // Show placeholder chips while loading if no types yet
+              if (state.deviceTypes.isEmpty) ...[
+                _DeviceTypeChip(
+                  label: 'Loading...',
+                  icon: LucideIcons.loader,
+                  isSelected: false,
+                  onTap: () {},
+                ),
+              ],
             ],
           ).animate().fadeIn(delay: 200.ms),
+
 
           const SizedBox(height: 32),
 
@@ -282,6 +311,7 @@ class _AddDeviceScreenState extends ConsumerState<AddDeviceScreen> {
                         return;
                       }
 
+                      // deviceTypeId is now a real UUID from API or null for "Other"
                       await ref.read(provisioningProvider.notifier).generateClaimToken(
                         name: _nameController.text.trim(),
                         deviceTypeId: _selectedDeviceTypeId,

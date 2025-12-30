@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/storage/secure_storage.dart';
 import '../../providers/auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -19,6 +20,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _rememberMe = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials();
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    final storage = ref.read(secureStorageProvider);
+    final saved = await storage.getSavedCredentials();
+    if (saved.rememberMe && mounted) {
+      setState(() {
+        _emailController.text = saved.email ?? '';
+        _passwordController.text = saved.password ?? '';
+        _rememberMe = true;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -30,9 +50,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    // Save or clear credentials based on remember me preference
+    final storage = ref.read(secureStorageProvider);
+    if (_rememberMe) {
+      await storage.saveCredentials(email: email, password: password);
+    } else {
+      await storage.clearSavedCredentials();
+    }
+
     final success = await ref.read(authStateProvider.notifier).login(
-      _emailController.text.trim(),
-      _passwordController.text,
+      email,
+      password,
     );
 
     if (success && mounted) {
@@ -184,16 +215,53 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                     const SizedBox(height: 8),
 
-                    // Forgot password
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {},
-                        child: Text(
-                          'Forgot password?',
-                          style: TextStyle(color: AppColors.accentPrimary),
+                    // Remember me and Forgot password row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Remember me checkbox
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: Checkbox(
+                                value: _rememberMe,
+                                onChanged: (value) {
+                                  setState(() => _rememberMe = value ?? false);
+                                },
+                                activeColor: AppColors.accentPrimary,
+                                side: BorderSide(color: colors.textMuted),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Remember me',
+                              style: TextStyle(
+                                color: colors.textSecondary,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
+                        // Forgot password
+                        TextButton(
+                          onPressed: () {},
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Text(
+                            'Forgot password?',
+                            style: TextStyle(color: AppColors.accentPrimary),
+                          ),
+                        ),
+                      ],
                     ),
 
                     const SizedBox(height: 24),

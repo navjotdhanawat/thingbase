@@ -12,8 +12,15 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'IoT SaaS Platform',
-  description: 'Multi-tenant IoT device management platform',
+  title: 'ThingBase - Open-Source IoT Platform for Developers',
+  description: 'The open-source IoT platform for developers. Device management, real-time telemetry, and multi-tenant control. Connect, monitor, and manage your IoT devices at any scale.',
+  keywords: ['IoT', 'Internet of Things', 'device management', 'MQTT', 'real-time', 'open source', 'telemetry'],
+  authors: [{ name: 'ThingBase' }],
+  openGraph: {
+    title: 'ThingBase - Open-Source IoT Platform',
+    description: 'Device management, real-time telemetry, and multi-tenant control for IoT developers.',
+    type: 'website',
+  },
 };
 
 export default function RootLayout({

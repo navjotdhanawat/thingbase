@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/config/app_config.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/storage/secure_storage.dart';
 import '../../../core/theme/app_theme.dart';
@@ -98,8 +99,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
           refreshToken: data['refreshToken'],
         );
 
-        // Fetch user info using the new token
-        await _fetchCurrentUser();
+        // Fetch user info using the new token directly (avoid storage read race)
+        await _fetchCurrentUser(freshAccessToken: data['accessToken']);
 
         // Fetch branding after login
         await _fetchBranding();
@@ -119,7 +120,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (e.response?.data != null) {
         final data = e.response!.data;
         if (data is Map) {
-          message = data['message'] ?? data['error'] ?? 'Login failed';
+          final errorValue = data['message'] ?? data['error'];
+          if (errorValue is String) {
+            message = errorValue;
+          } else if (errorValue is Map) {
+            message = errorValue['message']?.toString() ?? 'Login failed';
+          }
         }
       }
       state = state.copyWith(isLoading: false, error: message);
@@ -160,8 +166,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
           refreshToken: data['refreshToken'],
         );
 
-        // Fetch user info using the new token
-        await _fetchCurrentUser();
+        // Fetch user info using the new token directly (avoid storage read race)
+        await _fetchCurrentUser(freshAccessToken: data['accessToken']);
 
         // Fetch branding
         await _fetchBranding();
@@ -181,7 +187,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (e.response?.data != null) {
         final data = e.response!.data;
         if (data is Map) {
-          message = data['message'] ?? data['error'] ?? 'Registration failed';
+          final errorValue = data['message'] ?? data['error'];
+          if (errorValue is String) {
+            message = errorValue;
+          } else if (errorValue is Map) {
+            message = errorValue['message']?.toString() ?? 'Registration failed';
+          }
         }
       }
       state = state.copyWith(isLoading: false, error: message);
@@ -207,16 +218,36 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   /// Fetch current user info
-  Future<void> _fetchCurrentUser() async {
+  /// [freshAccessToken] can be passed to avoid reading from storage (for race condition fix)
+  Future<void> _fetchCurrentUser({String? freshAccessToken}) async {
     try {
-      final dio = _ref.read(dioProvider);
+      final storage = _ref.read(secureStorageProvider);
+      
+      // Use fresh token if provided, otherwise read from storage
+      String? accessToken = freshAccessToken;
+      if (accessToken == null) {
+        accessToken = await storage.getAccessToken();
+      }
+      
+      if (accessToken == null) {
+        state = state.copyWith(isAuthenticated: false, user: null);
+        return;
+      }
+      
+      // Use a fresh Dio instance with the token to avoid interceptor race condition
+      final dio = Dio(BaseOptions(
+        baseUrl: AppConfig.current.apiBaseUrl,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+      ));
       final response = await dio.post('/auth/me');
 
       if (response.data['success'] == true) {
         final user = User.fromJson(response.data['data']);
         
         // Save user info
-        final storage = _ref.read(secureStorageProvider);
         await storage.saveUserInfo(
           userId: user.id,
           tenantId: user.tenantId,
@@ -229,11 +260,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
     } catch (e) {
       // Token might be invalid
+      print('📡 _fetchCurrentUser error: $e');
       final storage = _ref.read(secureStorageProvider);
       await storage.clearAll();
       state = state.copyWith(isAuthenticated: false, user: null);
     }
   }
+
 
   /// Fetch tenant branding configuration
   Future<void> _fetchBranding() async {

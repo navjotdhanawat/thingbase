@@ -58,8 +58,9 @@ class AuthInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
     // Skip auth for public endpoints
+    // Use endsWith to avoid substring matching (e.g., /devices/claim vs /devices/claim-token)
     final publicPaths = ['/auth/login', '/auth/register', '/auth/refresh', '/devices/claim'];
-    final isPublic = publicPaths.any((path) => options.path.contains(path));
+    final isPublic = publicPaths.any((path) => options.path.endsWith(path));
 
     if (!isPublic) {
       final storage = _ref.read(secureStorageProvider);
@@ -67,11 +68,17 @@ class AuthInterceptor extends Interceptor {
       
       if (accessToken != null) {
         options.headers['Authorization'] = 'Bearer $accessToken';
+        print('📡 [Auth] Token attached (${accessToken.substring(0, 20)}...)');
+      } else {
+        print('📡 [Auth] WARNING: No access token found for ${options.path}');
       }
+    } else {
+      print('📡 [Auth] Skipping auth for public path: ${options.path}');
     }
 
     handler.next(options);
   }
+
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
@@ -91,25 +98,25 @@ class AuthInterceptor extends Interceptor {
       _isRefreshing = true;
 
       try {
-        final refreshed = await _refreshToken();
+        final freshToken = await _refreshToken();
         
-        if (refreshed) {
-          // Retry the original request
-          final response = await _retry(err.requestOptions);
+        if (freshToken != null) {
+          // Retry the original request with fresh token
+          final response = await _retry(err.requestOptions, freshToken);
           handler.resolve(response);
           
-          // Process queued requests
-          _processQueue(true);
+          // Process queued requests with fresh token
+          _processQueue(freshToken);
         } else {
           // Refresh failed - session expired
           await _handleSessionExpired();
           handler.next(err);
-          _processQueue(false);
+          _processQueueFailed();
         }
       } catch (e) {
         await _handleSessionExpired();
         handler.next(err);
-        _processQueue(false);
+        _processQueueFailed();
       } finally {
         _isRefreshing = false;
       }
@@ -119,38 +126,43 @@ class AuthInterceptor extends Interceptor {
     handler.next(err);
   }
 
-  /// Process queued requests after token refresh
-  void _processQueue(bool success) async {
+  /// Process queued requests after token refresh with fresh token
+  void _processQueue(String freshToken) async {
     for (final pending in _pendingRequests) {
-      if (success) {
-        try {
-          final response = await _retry(pending.options);
-          pending.handler.resolve(response);
-        } catch (e) {
-          pending.handler.reject(DioException(
-            requestOptions: pending.options,
-            error: e,
-          ));
-        }
-      } else {
+      try {
+        final response = await _retry(pending.options, freshToken);
+        pending.handler.resolve(response);
+      } catch (e) {
         pending.handler.reject(DioException(
           requestOptions: pending.options,
-          error: 'Session expired',
-          type: DioExceptionType.unknown,
+          error: e,
         ));
       }
     }
     _pendingRequests.clear();
   }
 
-  Future<bool> _refreshToken() async {
+  /// Process queued requests when refresh failed
+  void _processQueueFailed() {
+    for (final pending in _pendingRequests) {
+      pending.handler.reject(DioException(
+        requestOptions: pending.options,
+        error: 'Session expired',
+        type: DioExceptionType.unknown,
+      ));
+    }
+    _pendingRequests.clear();
+  }
+
+  /// Refresh token - returns new access token on success, null on failure
+  Future<String?> _refreshToken() async {
     try {
       final storage = _ref.read(secureStorageProvider);
       final refreshToken = await storage.getRefreshToken();
       
       if (refreshToken == null) {
         print('📡 No refresh token available');
-        return false;
+        return null;
       }
 
       print('📡 Attempting token refresh...');
@@ -163,27 +175,28 @@ class AuthInterceptor extends Interceptor {
 
       if (response.statusCode == 200 && response.data['success'] == true) {
         final data = response.data['data'];
+        final newAccessToken = data['accessToken'] as String;
+        
+        // Save tokens to storage (for future app restarts)
         await storage.saveTokens(
-          accessToken: data['accessToken'],
+          accessToken: newAccessToken,
           refreshToken: data['refreshToken'],
         );
         print('📡 Token refreshed successfully');
         authEventController.add(AuthEvent.tokenRefreshed);
-        return true;
+        return newAccessToken;
       }
       
       print('📡 Token refresh failed: ${response.data}');
-      return false;
+      return null;
     } catch (e) {
       print('📡 Token refresh error: $e');
-      return false;
+      return null;
     }
   }
 
-  Future<Response> _retry(RequestOptions requestOptions) async {
-    final storage = _ref.read(secureStorageProvider);
-    final accessToken = await storage.getAccessToken();
-    
+  /// Retry request with fresh access token
+  Future<Response> _retry(RequestOptions requestOptions, String accessToken) async {
     final options = Options(
       method: requestOptions.method,
       headers: {
@@ -201,6 +214,7 @@ class AuthInterceptor extends Interceptor {
       options: options,
     );
   }
+
 
   Future<void> _handleSessionExpired() async {
     print('📡 Session expired - logging out');

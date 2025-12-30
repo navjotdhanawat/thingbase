@@ -140,8 +140,55 @@ class SecureStorageService {
   // CLEAR ALL
   // ═══════════════════════════════════════════════════════════════════════════
 
+  /// Clears all data except remembered credentials
   Future<void> clearAll() async {
-    await _deleteAll();
+    // Clear tokens and user info, but keep remembered credentials
+    await Future.wait([
+      clearTokens(),
+      clearUserInfo(),
+    ]);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // REMEMBER ME / SAVED CREDENTIALS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  static const _keySavedEmail = 'saved_email';
+  static const _keySavedPassword = 'saved_password';
+  static const _keyRememberMe = 'remember_me';
+
+  /// Save login credentials for "Remember Me" feature
+  Future<void> saveCredentials({
+    required String email,
+    required String password,
+  }) async {
+    await Future.wait([
+      _write(_keySavedEmail, email),
+      _write(_keySavedPassword, password),
+      _write(_keyRememberMe, 'true'),
+    ]);
+  }
+
+  /// Get saved credentials
+  Future<({String? email, String? password, bool rememberMe})> getSavedCredentials() async {
+    final results = await Future.wait([
+      _read(_keySavedEmail),
+      _read(_keySavedPassword),
+      _read(_keyRememberMe),
+    ]);
+    return (
+      email: results[0],
+      password: results[1],
+      rememberMe: results[2] == 'true',
+    );
+  }
+
+  /// Clear saved credentials
+  Future<void> clearSavedCredentials() async {
+    await Future.wait([
+      _delete(_keySavedEmail),
+      _delete(_keySavedPassword),
+      _delete(_keyRememberMe),
+    ]);
   }
 }
-

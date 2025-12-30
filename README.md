@@ -285,6 +285,9 @@ iot-saas/
 │           ├── cli.ts          # CLI entry point
 │           └── simulator.ts    # Device simulation logic
 │
+├── firmware/
+│   └── esp32/                  # ESP32 Sample Firmware (C++/Arduino)
+│
 ├── packages/
 │   └── shared/                 # Shared TypeScript code
 │       └── src/

@@ -152,3 +152,14 @@ Thumbs.db
 .cache/
 tmp/
 temp/
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FIRMWARE / PLATFORMIO
+# ═══════════════════════════════════════════════════════════════════════════════
+firmware/esp32/.pio/
+firmware/esp32/.pioenvs/
+firmware/esp32/.piolibdeps/
+firmware/esp32/libdeps/
+*.bin
+*.elf
+*.hex

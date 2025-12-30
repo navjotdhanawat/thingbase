@@ -12,6 +12,6 @@ import { AlertsModule } from '../alerts/alerts.module';
   providers: [MqttService, MqttHandlers],
   exports: [MqttService],
 })
-export class MqttModule {}
+export class MqttModule { }
 
 
