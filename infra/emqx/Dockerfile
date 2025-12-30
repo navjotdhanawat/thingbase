@@ -6,9 +6,9 @@
 
 FROM emqx/emqx:5.8
 
-# Copy custom configuration
-COPY emqx.conf /opt/emqx/etc/emqx.conf
-COPY acl.conf /opt/emqx/etc/acl.conf
+# Copy custom configuration (paths relative to repo root for Railway build)
+COPY infra/emqx/emqx.conf /opt/emqx/etc/emqx.conf
+COPY infra/emqx/acl.conf /opt/emqx/etc/acl.conf
 
 # Environment variables (will be set by Railway)
 ENV EMQX_NODE__NAME="emqx@127.0.0.1"
