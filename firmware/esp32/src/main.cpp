@@ -7,13 +7,16 @@
 #include <Preferences.h>
 #include <PubSubClient.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 
 // ============================================================================
 // GLOBALS
 // ============================================================================
 
 WiFiClient espClient;
+WiFiClientSecure espSecureClient;
 PubSubClient mqttClient(espClient);
+bool useTLS = false;
 
 MqttCredentials mqttCreds;
 unsigned long lastTelemetryTime = 0;
@@ -238,17 +241,20 @@ void connectToMQTT() {
     return;
   }
 
-  // Parse broker URL (mqtt://host:port)
+  // Parse broker URL (mqtt://host:port or mqtts://host:port)
   String brokerUrl = String(mqttCreds.broker);
   String host;
   int port = 1883;
+  useTLS = false;
 
-  // Remove protocol prefix
+  // Remove protocol prefix and detect TLS
   if (brokerUrl.startsWith("mqtt://")) {
     brokerUrl = brokerUrl.substring(7);
+    useTLS = false;
   } else if (brokerUrl.startsWith("mqtts://")) {
     brokerUrl = brokerUrl.substring(8);
     port = 8883;
+    useTLS = true;
   }
 
   // Parse host and port
@@ -260,7 +266,19 @@ void connectToMQTT() {
     host = brokerUrl;
   }
 
-  Serial.printf("[MQTT] Connecting to %s:%d...\n", host.c_str(), port);
+  Serial.printf("[MQTT] Connecting to %s:%d (TLS: %s)...\n", host.c_str(), port,
+                useTLS ? "yes" : "no");
+
+  // Configure client based on TLS requirement
+  if (useTLS) {
+    // Use secure client for mqtts:// connections (HiveMQ Cloud, etc.)
+    espSecureClient
+        .setInsecure(); // Skip certificate verification (for simplicity)
+    mqttClient.setClient(espSecureClient);
+  } else {
+    // Use regular client for mqtt:// connections
+    mqttClient.setClient(espClient);
+  }
 
   mqttClient.setBufferSize(512);
   mqttClient.setServer(host.c_str(), port);
