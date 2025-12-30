@@ -565,7 +565,7 @@ export class DevicesService {
       throw new NotFoundException('Device not found');
     }
 
-    // Generate MQTT credentials
+    // Generate MQTT credentials for DB storage (for future custom auth validation)
     const mqttPassword = randomBytes(32).toString('hex');
     const mqttPasswordHash = await bcrypt.hash(mqttPassword, 10);
 
@@ -611,14 +611,27 @@ export class DevicesService {
     // Get MQTT broker URL from config
     const mqttBroker = process.env.MQTT_URL || 'mqtt://localhost:1883';
 
+    // For HiveMQ Cloud or other managed brokers with shared credentials:
+    // Use MQTT_DEVICE_USERNAME and MQTT_DEVICE_PASSWORD env vars
+    // For self-hosted brokers: use device-specific credentials
+    const useSharedCredentials = process.env.MQTT_DEVICE_USERNAME && process.env.MQTT_DEVICE_PASSWORD;
+
+    const mqttUsername = useSharedCredentials
+      ? process.env.MQTT_DEVICE_USERNAME!
+      : device.id;
+
+    const mqttDevicePassword = useSharedCredentials
+      ? process.env.MQTT_DEVICE_PASSWORD!
+      : mqttPassword;
+
     return {
       deviceId: device.id,
       tenantId: device.tenantId,
       mqtt: {
         broker: mqttBroker,
         clientId: `d_${device.id}`,
-        username: device.id,
-        password: mqttPassword,
+        username: mqttUsername,
+        password: mqttDevicePassword,
         topics: {
           telemetry: MQTT_TOPICS.TELEMETRY(device.tenantId, device.id),
           commands: MQTT_TOPICS.COMMAND(device.tenantId, device.id),
