@@ -8,7 +8,7 @@ const techStack = [
     { name: 'NestJS', category: 'API' },
     { name: 'PostgreSQL', category: 'Database' },
     { name: 'Redis', category: 'Cache' },
-    { name: 'Mosquitto', category: 'MQTT' },
+    { name: 'EMQX', category: 'MQTT' },
 ];
 
 export function ArchitectureSection() {
@@ -145,7 +145,7 @@ export function ArchitectureSection() {
                                     {[
                                         { name: 'PostgreSQL', desc: 'Data' },
                                         { name: 'Redis', desc: 'Cache + PubSub' },
-                                        { name: 'Mosquitto', desc: 'MQTT Broker' },
+                                        { name: 'EMQX', desc: 'MQTT Broker' },
                                     ].map((db, i) => (
                                         <motion.div
                                             key={db.name}

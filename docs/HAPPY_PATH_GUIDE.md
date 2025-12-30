@@ -254,7 +254,7 @@ The next telemetry will reflect the new state:
                           │ MQTT
                           ▼
                    ┌─────────────┐
-                   │  Mosquitto  │
+                   │    EMQX     │
                    │   Broker    │
                    └──────┬──────┘
                           │

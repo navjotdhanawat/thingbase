@@ -44,7 +44,7 @@
 - **State shadow** - Redis-cached device state for instant access
 
 ### 📊 Real-Time Telemetry
-- **MQTT broker** - Eclipse Mosquitto for device communication
+- **MQTT broker** - EMQX for device communication with HTTP authentication
 - **Live updates** - WebSocket streaming to web and mobile
 - **Historical data** - PostgreSQL with TimescaleDB-ready schema
 - **Charts & visualization** - Recharts for telemetry graphs
@@ -94,7 +94,7 @@
 │                         │           │           │                           │
 │                         ▼           ▼           ▼                           │
 │    ┌──────────────┐ ┌──────────────┐ ┌──────────────┐                      │
-│    │  PostgreSQL  │ │    Redis     │ │  Mosquitto   │                      │
+│    │  PostgreSQL  │ │    Redis     │ │     EMQX     │                      │
 │    │    (Data)    │ │ (Cache+PubSub)│ │(MQTT Broker) │                      │
 │    └──────────────┘ └──────────────┘ └──────────────┘                      │
 │                                                                              │
@@ -120,7 +120,7 @@ Device → MQTT → API → Redis Pub/Sub → WebSocket Gateway → Web/Mobile C
 | **Prisma 6** | Type-safe ORM |
 | **PostgreSQL 16** | Primary database |
 | **Redis 7** | Caching, pub/sub, session storage |
-| **Mosquitto 2** | MQTT broker for IoT devices |
+| **EMQX 5** | MQTT broker with HTTP authentication |
 | **Socket.IO 4** | Real-time WebSocket communication |
 | **JWT** | Authentication tokens |
 | **Zod** | Runtime validation |
@@ -189,7 +189,7 @@ docker compose up -d
 This starts:
 - PostgreSQL on port `5433`
 - Redis on port `6379`
-- Mosquitto MQTT on port `1883`
+- EMQX MQTT on port `1883` (Dashboard at `18083`)
 
 ### 3. Configure Environment
 
@@ -297,7 +297,7 @@ iot-saas/
 │
 ├── docs/                       # Documentation
 ├── infra/                      # Infrastructure configs
-│   └── mosquitto/              # MQTT broker config
+│   └── emqx/                   # EMQX MQTT broker config
 ├── docker-compose.yml          # Development services
 ├── turbo.json                  # Turborepo config
 └── pnpm-workspace.yaml         # Workspace definition
@@ -469,7 +469,7 @@ pnpm format                          # Format code with Prettier
 - [x] Commands with acknowledgment
 
 ### ✅ Phase 4: Real-Time & MQTT
-- [x] Mosquitto MQTT broker
+- [x] EMQX MQTT broker with HTTP authentication
 - [x] MQTT handlers for telemetry
 - [x] WebSocket gateway
 - [x] Real-time web updates
