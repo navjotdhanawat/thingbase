@@ -5,6 +5,7 @@
 #include "storage.h"
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <DHT.h>
 #include <Preferences.h>
 #include <PubSubClient.h>
 #include <WiFi.h>
@@ -25,6 +26,15 @@ unsigned long lastReconnectAttempt = 0;
 unsigned long buttonPressStart = 0;
 bool buttonWasPressed = false;
 
+// Warehouse monitoring
+DHT dht(DHT_PIN, DHT_TYPE);
+unsigned long lastHeartbeat = 0;
+unsigned long lastSensorRead = 0;
+bool alertMode = false;
+bool sensorConnected = false;
+float lastTemperature = 0;
+float lastHumidity = 0;
+
 // ============================================================================
 // FORWARD DECLARATIONS
 // ============================================================================
@@ -37,6 +47,12 @@ void sendTelemetry();
 void sendStatus(bool online);
 void handleCommand(const JsonObject &command);
 void checkFactoryReset();
+
+// Warehouse monitoring functions
+void readSensorAndCheckThresholds();
+void heartbeatBlink();
+void triggerAlert();
+void clearAlert();
 
 // ============================================================================
 // SETUP & LOOP
@@ -51,9 +67,22 @@ void setup() {
   Serial.println("     ThingBase ESP32 Firmware");
   Serial.printf("     Version: %s\n", FIRMWARE_VERSION);
   Serial.println("========================================");
+  Serial.println("     Warehouse Monitoring Enabled");
+  Serial.println("========================================");
 
+  // Initialize GPIO pins
   pinMode(LED_PIN, OUTPUT);
   pinMode(RESET_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(ALERT_LED_PIN, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+
+  // Ensure alert outputs are off initially
+  digitalWrite(ALERT_LED_PIN, LOW);
+  digitalWrite(BUZZER_PIN, LOW);
+
+  // Initialize DHT sensor
+  dht.begin();
+  Serial.println("[Sensor] DHT22 initialized on GPIO 4");
 
   // Initialize storage
   storageInit();
@@ -229,6 +258,20 @@ void loop() {
       sendTelemetry();
     }
   }
+
+  // Heartbeat blink (every 5 seconds, only when not in alert mode)
+  if (now - lastHeartbeat >= HEARTBEAT_INTERVAL_MS) {
+    lastHeartbeat = now;
+    if (!alertMode) {
+      heartbeatBlink();
+    }
+  }
+
+  // Read sensor and check thresholds (every 2 seconds)
+  if (now - lastSensorRead >= SENSOR_READ_INTERVAL_MS) {
+    lastSensorRead = now;
+    readSensorAndCheckThresholds();
+  }
 }
 
 // ============================================================================
@@ -403,20 +446,24 @@ void sendTelemetry() {
   JsonDocument doc;
 
   JsonObject data = doc["data"].to<JsonObject>();
-  data["temperature"] = 20.0 + random(0, 100) / 10.0;
-  data["humidity"] = 40.0 + random(0, 200) / 10.0;
+  data["temperature"] = lastTemperature;
+  data["humidity"] = lastHumidity;
   data["uptime"] = millis() / 1000;
   data["rssi"] = WiFi.RSSI();
   data["led"] = digitalRead(LED_PIN) == HIGH;
+  data["alertLed"] = digitalRead(ALERT_LED_PIN) == HIGH;
+  data["alert"] = alertMode;
+  data["sensorConnected"] = sensorConnected;
 
   doc["timestamp"] = "2024-01-01T00:00:00Z"; // TODO: Use NTP
 
-  char buffer[256];
+  char buffer[512];
   serializeJson(doc, buffer);
 
   mqttClient.publish(mqttCreds.topicTelemetry, buffer);
-  Serial.printf("[MQTT] Telemetry: temp=%.1f°C, hum=%.1f%%\n",
-                data["temperature"].as<float>(), data["humidity"].as<float>());
+  Serial.printf("[Telemetry] temp=%.1f°C, hum=%.1f%%, alert=%s, sensor=%s\n",
+                lastTemperature, lastHumidity, alertMode ? "ACTIVE" : "off",
+                sensorConnected ? "OK" : "FAIL");
 }
 
 // ============================================================================
@@ -508,4 +555,115 @@ void checkFactoryReset() {
   } else {
     buttonWasPressed = false;
   }
+}
+
+// ============================================================================
+// WAREHOUSE MONITORING FUNCTIONS
+// ============================================================================
+
+void readSensorAndCheckThresholds() {
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature();
+
+  // Check if reading failed
+  if (isnan(humidity) || isnan(temperature)) {
+    if (sensorConnected) {
+      // Only log on state change to avoid log spam
+      Serial.println("[Sensor] ❌ ERROR: Lost connection to DHT22!");
+      Serial.println("[Sensor] Troubleshooting: Check wiring DATA->GPIO4, "
+                     "VCC->3.3V, GND->GND");
+      Serial.println(
+          "[Sensor] Ensure 4.7kΩ pull-up resistor between DATA and VCC");
+    }
+    sensorConnected = false;
+
+    // Blink alert LED slowly to indicate sensor error
+    digitalWrite(ALERT_LED_PIN, !digitalRead(ALERT_LED_PIN));
+    return;
+  }
+
+  // Sensor is working - update state
+  if (!sensorConnected) {
+    Serial.println("[Sensor] ✓ DHT22 sensor connected successfully!");
+    Serial.printf("[Sensor] Initial reading: %.1f°C, %.1f%% humidity\n",
+                  temperature, humidity);
+  }
+  sensorConnected = true;
+  lastTemperature = temperature;
+  lastHumidity = humidity;
+
+  // Check thresholds
+  bool tempHigh = temperature > TEMP_HIGH_THRESHOLD;
+  bool tempLow = temperature < TEMP_LOW_THRESHOLD;
+  bool humidityHigh = humidity > HUMIDITY_HIGH_THRESHOLD;
+  bool humidityLow = humidity < HUMIDITY_LOW_THRESHOLD;
+  bool shouldAlert = tempHigh || tempLow || humidityHigh || humidityLow;
+
+  if (shouldAlert) {
+    if (!alertMode) {
+      // New alert - log details
+      Serial.println("[Alert] ⚠️ THRESHOLD EXCEEDED - TRIGGERING ALERT!");
+      if (tempHigh) {
+        Serial.printf(
+            "[Alert] 🔥 Temperature HIGH: %.1f°C (threshold: %.1f°C)\n",
+            temperature, TEMP_HIGH_THRESHOLD);
+      }
+      if (tempLow) {
+        Serial.printf("[Alert] ❄️ Temperature LOW: %.1f°C (threshold: %.1f°C)\n",
+                      temperature, TEMP_LOW_THRESHOLD);
+      }
+      if (humidityHigh) {
+        Serial.printf("[Alert] 💧 Humidity HIGH: %.1f%% (threshold: %.1f%%)\n",
+                      humidity, HUMIDITY_HIGH_THRESHOLD);
+      }
+      if (humidityLow) {
+        Serial.printf("[Alert] 🏜️ Humidity LOW: %.1f%% (threshold: %.1f%%)\n",
+                      humidity, HUMIDITY_LOW_THRESHOLD);
+      }
+    }
+    alertMode = true;
+    triggerAlert();
+  } else {
+    if (alertMode) {
+      Serial.println("[Alert] ✓ Conditions normalized - clearing alert");
+      Serial.printf("[Alert] Current: %.1f°C, %.1f%% humidity\n", temperature,
+                    humidity);
+      clearAlert();
+    }
+    alertMode = false;
+  }
+}
+
+void heartbeatBlink() {
+  // Single short blink on status LED to show device is alive
+  digitalWrite(LED_PIN, HIGH);
+  delay(100);
+  digitalWrite(LED_PIN, LOW);
+  Serial.println("[Heartbeat] ♥ Device alive");
+}
+
+void triggerAlert() {
+  // Rapid red LED flashing
+  Serial.println("[Alert] Flashing red LED and buzzer...");
+  for (int i = 0; i < 5; i++) {
+    digitalWrite(ALERT_LED_PIN, HIGH);
+    delay(100);
+    digitalWrite(ALERT_LED_PIN, LOW);
+    delay(100);
+  }
+
+  // Beep buzzer
+  for (int i = 0; i < 3; i++) {
+    digitalWrite(BUZZER_PIN, HIGH);
+    delay(150);
+    digitalWrite(BUZZER_PIN, LOW);
+    delay(100);
+  }
+}
+
+void clearAlert() {
+  // Turn off alert indicators
+  digitalWrite(ALERT_LED_PIN, LOW);
+  digitalWrite(BUZZER_PIN, LOW);
+  Serial.println("[Alert] Alert indicators cleared");
 }
